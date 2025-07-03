@@ -1,0 +1,1374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jim's AI News Aggregator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f6f6ef;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background-color: #ff6600;
+            padding: 10px 0;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .btn {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            background-color: rgba(255,255,255,0.3);
+        }
+
+        .settings-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: 24px;
+            padding: 5px;
+        }
+
+        main {
+            margin-top: 70px;
+            min-height: calc(100vh - 70px);
+        }
+
+        .tabs {
+            background-color: white;
+            border-bottom: 2px solid #ff6600;
+            padding: 0;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 0;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 16px;
+            color: #666;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .tab:hover {
+            color: #ff6600;
+        }
+
+        .tab.active {
+            color: #ff6600;
+            border-bottom-color: #ff6600;
+            font-weight: 600;
+        }
+
+        .news-item {
+            background-color: white;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+
+        .news-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .news-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            text-decoration: none;
+            display: block;
+        }
+
+        .news-title:hover {
+            color: #ff6600;
+        }
+
+        .news-meta {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 6px;
+        }
+
+        .news-description {
+            font-size: 14px;
+            color: #555;
+            line-height: 1.5;
+            max-height: 40px;
+            overflow: hidden;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #666;
+        }
+
+        .error {
+            background-color: #fee;
+            color: #c33;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+
+        .more-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 10px 24px;
+            background-color: #ff6600;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .more-btn:hover {
+            background-color: #e55500;
+        }
+
+        .more-btn:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading-more {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .no-more {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-style: italic;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .settings-section {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .settings-section:last-child {
+            border-bottom: none;
+        }
+
+        .settings-section h3 {
+            font-size: 18px;
+            margin-bottom: 12px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .rss-feed-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+
+        .rss-feed-url {
+            flex: 1;
+            margin-right: 10px;
+            word-break: break-all;
+            font-size: 14px;
+        }
+
+        .remove-feed-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .remove-feed-btn:hover {
+            background-color: #c82333;
+        }
+
+        .add-feed-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .add-feed-container input {
+            flex: 1;
+        }
+
+        .add-feed-btn {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .add-feed-btn:hover {
+            background-color: #218838;
+        }
+
+        .danger-zone {
+            background-color: #fff5f5;
+            padding: 16px;
+            border-radius: 4px;
+            border: 1px solid #fecaca;
+        }
+
+        .danger-btn {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+
+        .danger-btn:hover {
+            background-color: #c82333;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .warning-text {
+            color: #d93025;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .tabs {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            .tab {
+                white-space: nowrap;
+            }
+
+            .modal-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">Jim's AI News Aggregator</div>
+                <div class="header-actions">
+                    <button class="btn" onclick="refreshContent()">↻ Refresh</button>
+                    <button class="settings-btn" onclick="openSettings()">⚙</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('all')">All</button>
+                <button class="tab" onclick="switchTab('hackernews')">Hacker News</button>
+                <button class="tab" onclick="switchTab('reddit')">Reddit</button>
+                <button class="tab" onclick="switchTab('mastodon')">Mastodon</button>
+                <button class="tab" onclick="switchTab('rss')">RSS Feeds</button>
+            </div>
+
+            <div id="content">
+                <div class="loading">Loading AI news...</div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Settings</h2>
+                <button class="close-btn" onclick="closeSettings()">&times;</button>
+            </div>
+
+            <div class="settings-section">
+                <h3>General Settings</h3>
+                <div class="form-group">
+                    <label for="timeFilter">Time Filter</label>
+                    <select id="timeFilter" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                        <option value="day">Last 24 Hours</option>
+                        <option value="week" selected>Last Week</option>
+                        <option value="all">All Time</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Hacker News Settings</h3>
+                <div class="form-group">
+                    <label for="hnSearchTerm">Search Term</label>
+                    <input type="text" id="hnSearchTerm" placeholder="AI" value="AI">
+                    <p style="font-size: 12px; color: #666; margin-top: 5px;">Enter a single keyword only (e.g., AI, GPT, LLM, neural)</p>
+                    <p id="hnWarning" class="warning-text" style="display: none;">Please enter only one keyword</p>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Reddit Preferences</h3>
+                <div class="form-group">
+                    <label for="redditSubreddits">Subreddits (comma-separated)</label>
+                    <input type="text" id="redditSubreddits" placeholder="r/artificial, r/MachineLearning, r/singularity" value="r/artificial, r/MachineLearning, r/singularity, r/OpenAI">
+                </div>
+                <div class="form-group">
+                    <label for="redditSearchTerms">Search Terms (optional)</label>
+                    <input type="text" id="redditSearchTerms" placeholder="AI, GPT, neural network" value="">
+                    <p style="font-size: 12px; color: #666; margin-top: 5px;">Leave empty to get all posts from subreddits, or add terms to filter posts.</p>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Mastodon Preferences</h3>
+                <div class="form-group">
+                    <label for="mastodonInstance">Mastodon Instance</label>
+                    <input type="text" id="mastodonInstance" placeholder="mastodon.social" value="mastodon.social">
+                </div>
+                <div class="form-group">
+                    <label for="mastodonHashtags">Hashtags (comma-separated)</label>
+                    <input type="text" id="mastodonHashtags" placeholder="#AI, #ArtificialIntelligence, #MachineLearning" value="#AI, #ArtificialIntelligence, #MachineLearning">
+                </div>
+                <p style="font-size: 13px; color: #666; margin-top: 5px;">Note: Uses public Mastodon API (no authentication required)</p>
+            </div>
+
+            <div class="settings-section">
+                <h3>RSS Feeds</h3>
+                <div id="rssFeedsList"></div>
+                <div class="add-feed-container">
+                    <input type="url" id="newRssFeed" placeholder="https://example.com/feed.xml">
+                    <button class="add-feed-btn" onclick="addRssFeed()">Add Feed</button>
+                </div>
+                <p style="font-size: 12px; color: #666; margin-top: 10px;">Note: RSS feeds use CORS proxies. If feeds fail, try refreshing or use a browser extension like "CORS Unblock".</p>
+            </div>
+
+            <div class="settings-section">
+                <h3>Data Management</h3>
+                <div class="danger-zone">
+                    <p>Clear all cached data and reset the application.</p>
+                    <button class="danger-btn" onclick="clearAllData()">Clear All Data</button>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <button class="btn" style="background-color: #28a745; width: 100%;" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // IndexedDB setup
+        let db;
+        const DB_NAME = 'AINewsAggregator';
+        const DB_VERSION = 1;
+        const STORE_ARTICLES = 'articles';
+        const STORE_SETTINGS = 'settings';
+
+        // Global state
+        let currentTab = 'all';
+        let articles = [];
+        let displayedArticles = [];
+        let settings = {
+            timeFilter: 'week',
+            hnSearchTerm: 'AI',
+            redditSubreddits: 'r/artificial, r/MachineLearning, r/singularity, r/OpenAI',
+            redditSearchTerms: '',
+            mastodonInstance: 'mastodon.social',
+            mastodonHashtags: '#AI, #ArtificialIntelligence, #MachineLearning',
+            rssFeeds: [
+                'https://www.artificialintelligence-news.com/feed/',
+                'https://openai.com/blog/rss.xml'
+            ]
+        };
+
+        // Pagination state
+        let paginationState = {
+            hackernews: { page: 0, hasMore: true, loading: false },
+            reddit: { subredditIndex: 0, after: null, hasMore: true, loading: false },
+            mastodon: { hashtagIndex: 0, maxId: null, hasMore: true, loading: false },
+            rss: { hasMore: false, loading: false },
+            all: { hasMore: true, loading: false }
+        };
+
+        // Initialize IndexedDB
+        async function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
+
+                    // Create articles store
+                    if (!db.objectStoreNames.contains(STORE_ARTICLES)) {
+                        const articlesStore = db.createObjectStore(STORE_ARTICLES, { keyPath: 'id' });
+                        articlesStore.createIndex('source', 'source', { unique: false });
+                        articlesStore.createIndex('timestamp', 'timestamp', { unique: false });
+                    }
+
+                    // Create settings store
+                    if (!db.objectStoreNames.contains(STORE_SETTINGS)) {
+                        db.createObjectStore(STORE_SETTINGS, { keyPath: 'key' });
+                    }
+                };
+            });
+        }
+
+        // Load settings from IndexedDB
+        async function loadSettings() {
+            const transaction = db.transaction([STORE_SETTINGS], 'readonly');
+            const store = transaction.objectStore(STORE_SETTINGS);
+            
+            return new Promise((resolve) => {
+                const request = store.get('config');
+                request.onsuccess = () => {
+                    if (request.result) {
+                        settings = request.result.value;
+                    }
+                    resolve(settings);
+                };
+                request.onerror = () => resolve(settings);
+            });
+        }
+
+        // Save settings to IndexedDB
+        async function saveSettingsDB() {
+            const transaction = db.transaction([STORE_SETTINGS], 'readwrite');
+            const store = transaction.objectStore(STORE_SETTINGS);
+            
+            return new Promise((resolve, reject) => {
+                const request = store.put({ key: 'config', value: settings });
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Load articles from IndexedDB
+        async function loadArticles() {
+            const transaction = db.transaction([STORE_ARTICLES], 'readonly');
+            const store = transaction.objectStore(STORE_ARTICLES);
+            
+            return new Promise((resolve) => {
+                const request = store.getAll();
+                request.onsuccess = () => {
+                    articles = request.result || [];
+                    resolve(articles);
+                };
+                request.onerror = () => resolve([]);
+            });
+        }
+
+        // Save article to IndexedDB
+        async function saveArticle(article) {
+            const transaction = db.transaction([STORE_ARTICLES], 'readwrite');
+            const store = transaction.objectStore(STORE_ARTICLES);
+            
+            return new Promise((resolve, reject) => {
+                const request = store.put(article);
+                request.onsuccess = () => resolve();
+                request.onerror = () => reject(request.error);
+            });
+        }
+
+        // Clear all data
+        async function clearAllData() {
+            if (!confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                return;
+            }
+
+            const transaction = db.transaction([STORE_ARTICLES, STORE_SETTINGS], 'readwrite');
+            
+            transaction.objectStore(STORE_ARTICLES).clear();
+            transaction.objectStore(STORE_SETTINGS).clear();
+            
+            transaction.oncomplete = () => {
+                articles = [];
+                displayedArticles = [];
+                settings = {
+                    timeFilter: 'week',
+                    hnSearchTerm: 'AI',
+                    redditSubreddits: 'r/artificial, r/MachineLearning, r/singularity, r/OpenAI',
+                    redditSearchTerms: '',
+                    mastodonInstance: 'mastodon.social',
+                    mastodonHashtags: '#AI, #ArtificialIntelligence, #MachineLearning',
+                    rssFeeds: []
+                };
+                resetPaginationState();
+                renderContent();
+                closeSettings();
+                alert('All data has been cleared.');
+            };
+        }
+
+        // Reset pagination state
+        function resetPaginationState() {
+            paginationState = {
+                hackernews: { page: 0, hasMore: true, loading: false },
+                reddit: { subredditIndex: 0, after: null, hasMore: true, loading: false },
+                mastodon: { hashtagIndex: 0, maxId: null, hasMore: true, loading: false },
+                rss: { hasMore: false, loading: false },
+                all: { hasMore: true, loading: false }
+            };
+        }
+
+        // Helper function to filter by time
+        function filterByTime(timestamp) {
+            const now = Date.now();
+            const age = now - timestamp;
+            const day = 24 * 60 * 60 * 1000;
+            const week = 7 * day;
+            
+            if (settings.timeFilter === 'day') return age <= day;
+            if (settings.timeFilter === 'week') return age <= week;
+            return true; // 'all'
+        }
+
+        // Fetch Hacker News articles
+        async function fetchHackerNews(loadMore = false) {
+            try {
+                const searchTerm = settings.hnSearchTerm || 'AI';
+                const page = loadMore ? paginationState.hackernews.page : 0;
+                
+                // Use search_by_date for recent content when time filter is day or week
+                const useByDate = settings.timeFilter === 'day' || settings.timeFilter === 'week';
+                const endpoint = useByDate ? 'search_by_date' : 'search';
+                
+                // Encode the search term properly
+                const encodedTerm = encodeURIComponent(searchTerm.trim());
+                const hitsPerPage = 50;
+                
+                let searchUrl = `https://hn.algolia.com/api/v1/${endpoint}?query=${encodedTerm}&tags=story&page=${page}&hitsPerPage=${hitsPerPage}`;
+                
+                console.log('Fetching HN with URL:', searchUrl);
+                console.log('Page:', page, 'Search term:', searchTerm);
+                
+                const searchResponse = await fetch(searchUrl);
+                const searchData = await searchResponse.json();
+                
+                console.log('HN API response:', searchData);
+                console.log(`Found ${searchData.hits ? searchData.hits.length : 0} HN stories on page ${page}`);
+                
+                // Check if there are more pages
+                paginationState.hackernews.hasMore = page < searchData.nbPages - 1;
+                
+                if (!searchData.hits || searchData.hits.length === 0) {
+                    paginationState.hackernews.hasMore = false;
+                    return [];
+                }
+                
+                const hnArticles = searchData.hits
+                    .filter(story => filterByTime(new Date(story.created_at).getTime()))
+                    .map(story => ({
+                        id: `hn_${story.objectID}`,
+                        title: story.title || 'Untitled',
+                        url: story.url || `https://news.ycombinator.com/item?id=${story.objectID}`,
+                        description: story.story_text ? story.story_text.substring(0, 200) + '...' : '',
+                        source: 'hackernews',
+                        timestamp: new Date(story.created_at).getTime(),
+                        points: story.points || 0,
+                        comments: story.num_comments || 0
+                    }));
+
+                console.log(`${hnArticles.length} HN stories after time filter`);
+
+                // Update pagination state
+                if (loadMore) {
+                    paginationState.hackernews.page = page + 1;
+                } else {
+                    paginationState.hackernews.page = 1;
+                }
+
+                // Save to IndexedDB
+                for (const article of hnArticles) {
+                    await saveArticle(article);
+                }
+
+                return hnArticles;
+            } catch (error) {
+                console.error('Error fetching Hacker News:', error);
+                paginationState.hackernews.hasMore = false;
+                return [];
+            }
+        }
+
+        // Fetch Reddit posts
+        async function fetchReddit(loadMore = false) {
+            const subreddits = settings.redditSubreddits.split(',').map(s => s.trim());
+            const searchTerms = settings.redditSearchTerms.trim();
+            const allPosts = [];
+            
+            // If loading more, continue from where we left off
+            const startIndex = loadMore ? paginationState.reddit.subredditIndex : 0;
+            const maxSubreddits = loadMore ? Math.min(startIndex + 2, subreddits.length) : subreddits.length;
+            
+            for (let i = startIndex; i < maxSubreddits; i++) {
+                const subreddit = subreddits[i];
+                try {
+                    let url = `https://www.reddit.com/${subreddit}/hot.json?limit=25`;
+                    
+                    // Add after parameter for pagination
+                    if (loadMore && paginationState.reddit.after && i === startIndex) {
+                        url += `&after=${paginationState.reddit.after}`;
+                    }
+                    
+                    // If search terms are provided, use search instead
+                    if (searchTerms) {
+                        const query = encodeURIComponent(searchTerms);
+                        url = `https://www.reddit.com/${subreddit}/search.json?q=${query}&restrict_sr=1&limit=25&sort=hot`;
+                        if (loadMore && paginationState.reddit.after && i === startIndex) {
+                            url += `&after=${paginationState.reddit.after}`;
+                        }
+                    }
+                    
+                    const response = await fetch(url);
+                    const data = await response.json();
+                    
+                    // Update pagination info
+                    if (data.data.after) {
+                        paginationState.reddit.after = data.data.after;
+                        paginationState.reddit.hasMore = true;
+                    } else if (i === subreddits.length - 1) {
+                        paginationState.reddit.hasMore = false;
+                    }
+                    
+                    const posts = data.data.children
+                        .filter(post => filterByTime(post.data.created_utc * 1000))
+                        .map(post => ({
+                            id: `reddit_${post.data.id}_${Date.now()}`,
+                            title: post.data.title,
+                            url: post.data.url.includes('reddit.com/r/') ? post.data.url : post.data.url,
+                            description: post.data.selftext ? post.data.selftext.substring(0, 200) + '...' : '',
+                            source: 'reddit',
+                            subreddit: subreddit,
+                            timestamp: post.data.created_utc * 1000,
+                            score: post.data.score,
+                            comments: post.data.num_comments
+                        }));
+                    
+                    allPosts.push(...posts);
+                    
+                    // Save to IndexedDB
+                    for (const post of posts) {
+                        await saveArticle(post);
+                    }
+                    
+                    // Small delay to avoid rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                } catch (error) {
+                    console.error(`Error fetching ${subreddit}:`, error);
+                }
+            }
+            
+            // Update subreddit index for next load
+            paginationState.reddit.subredditIndex = maxSubreddits % subreddits.length;
+            
+            return allPosts;
+        }
+
+        // Fetch Mastodon posts
+        async function fetchMastodon(loadMore = false) {
+            const instance = settings.mastodonInstance || 'mastodon.social';
+            const hashtags = settings.mastodonHashtags.split(',').map(h => h.trim().replace('#', ''));
+            const allToots = [];
+            
+            // If loading more, continue from where we left off
+            const startIndex = loadMore ? paginationState.mastodon.hashtagIndex : 0;
+            const maxHashtags = loadMore ? Math.min(startIndex + 2, hashtags.length) : hashtags.length;
+            
+            for (let i = startIndex; i < maxHashtags; i++) {
+                const hashtag = hashtags[i];
+                try {
+                    let url = `https://${instance}/api/v1/timelines/tag/${hashtag}?limit=20`;
+                    
+                    // Add max_id for pagination
+                    if (loadMore && paginationState.mastodon.maxId && i === startIndex) {
+                        url += `&max_id=${paginationState.mastodon.maxId}`;
+                    }
+                    
+                    const response = await fetch(url);
+                    const toots = await response.json();
+                    
+                    // Update pagination info
+                    if (toots.length > 0) {
+                        paginationState.mastodon.maxId = toots[toots.length - 1].id;
+                        paginationState.mastodon.hasMore = true;
+                    } else if (i === hashtags.length - 1) {
+                        paginationState.mastodon.hasMore = false;
+                    }
+                    
+                    const posts = toots
+                        .filter(toot => filterByTime(new Date(toot.created_at).getTime()))
+                        .map(toot => ({
+                            id: `mastodon_${toot.id}_${Date.now()}`,
+                            title: toot.content.replace(/<[^>]*>/g, '').substring(0, 100) + '...',
+                            url: toot.url,
+                            description: toot.content.replace(/<[^>]*>/g, '').substring(0, 200) + '...',
+                            source: 'mastodon',
+                            instance: instance,
+                            hashtag: hashtag,
+                            timestamp: new Date(toot.created_at).getTime(),
+                            boosts: toot.reblogs_count,
+                            favorites: toot.favourites_count
+                        }));
+                    
+                    allToots.push(...posts);
+                    
+                    // Save to IndexedDB
+                    for (const post of posts) {
+                        await saveArticle(post);
+                    }
+                    
+                    // Small delay to avoid rate limiting
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                } catch (error) {
+                    console.error(`Error fetching Mastodon #${hashtag}:`, error);
+                }
+            }
+            
+            // Update hashtag index for next load
+            paginationState.mastodon.hashtagIndex = maxHashtags % hashtags.length;
+            
+            return allToots;
+        }
+
+        // CORS proxy options
+        const corsProxies = [
+            (url) => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+            (url) => `https://cors-anywhere.herokuapp.com/${url}`,
+            (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+            (url) => `https://thingproxy.freeboard.io/fetch/${url}`
+        ];
+
+        // Try multiple CORS proxies
+        async function fetchWithCORS(url) {
+            for (const proxyFn of corsProxies) {
+                try {
+                    const proxyUrl = proxyFn(url);
+                    const response = await fetch(proxyUrl, { 
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/rss+xml, application/xml, text/xml, */*'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        return await response.text();
+                    }
+                } catch (error) {
+                    console.log(`Proxy failed: ${proxyFn.name}, trying next...`);
+                }
+            }
+            throw new Error('All CORS proxies failed');
+        }
+
+        // Fetch RSS feeds
+        async function fetchRSSFeeds() {
+            const allArticles = [];
+            
+            for (const feedUrl of settings.rssFeeds) {
+                try {
+                    const xmlText = await fetchWithCORS(feedUrl);
+                    
+                    // Parse RSS
+                    const parser = new DOMParser();
+                    const xml = parser.parseFromString(xmlText, 'text/xml');
+                    
+                    // Check for parse errors
+                    const parseError = xml.querySelector('parsererror');
+                    if (parseError) {
+                        console.error('RSS parse error:', parseError.textContent);
+                        continue;
+                    }
+                    
+                    const items = xml.querySelectorAll('item');
+                    
+                    items.forEach((item, index) => {
+                        const title = item.querySelector('title')?.textContent || '';
+                        const link = item.querySelector('link')?.textContent || '';
+                        const description = item.querySelector('description')?.textContent || '';
+                        const pubDate = item.querySelector('pubDate')?.textContent || '';
+                        
+                        const timestamp = pubDate ? new Date(pubDate).getTime() : Date.now();
+                        
+                        // Apply time filter
+                        if (filterByTime(timestamp)) {
+                            const article = {
+                                id: `rss_${feedUrl}_${index}_${Date.now()}`,
+                                title: title,
+                                url: link,
+                                description: description.replace(/<[^>]*>/g, '').substring(0, 200) + '...',
+                                source: 'rss',
+                                feedUrl: feedUrl,
+                                timestamp: timestamp
+                            };
+                            
+                            allArticles.push(article);
+                            saveArticle(article);
+                        }
+                    });
+                } catch (error) {
+                    console.error(`Error fetching RSS feed ${feedUrl}:`, error);
+                    // Continue with other feeds even if one fails
+                }
+            }
+            
+            return allArticles;
+        }
+
+        // Load more content
+        async function loadMore() {
+            if (paginationState[currentTab].loading) return;
+            
+            paginationState[currentTab].loading = true;
+            showLoadingMore();
+            
+            let newArticles = [];
+            
+            if (currentTab === 'all') {
+                // Load more from all sources proportionally
+                const [hn, reddit, mastodon] = await Promise.all([
+                    paginationState.hackernews.hasMore ? fetchHackerNews(true) : Promise.resolve([]),
+                    paginationState.reddit.hasMore ? fetchReddit(true) : Promise.resolve([]),
+                    paginationState.mastodon.hasMore ? fetchMastodon(true) : Promise.resolve([])
+                ]);
+                
+                newArticles = [...hn, ...reddit, ...mastodon];
+                
+                // Update hasMore for 'all' tab
+                paginationState.all.hasMore = 
+                    paginationState.hackernews.hasMore || 
+                    paginationState.reddit.hasMore || 
+                    paginationState.mastodon.hasMore;
+            } else {
+                // Load more for specific source
+                switch (currentTab) {
+                    case 'hackernews':
+                        newArticles = await fetchHackerNews(true);
+                        break;
+                    case 'reddit':
+                        newArticles = await fetchReddit(true);
+                        break;
+                    case 'mastodon':
+                        newArticles = await fetchMastodon(true);
+                        break;
+                    case 'rss':
+                        // RSS doesn't support pagination
+                        newArticles = [];
+                        break;
+                }
+            }
+            
+            paginationState[currentTab].loading = false;
+            
+            if (newArticles.length > 0) {
+                articles = [...articles, ...newArticles];
+                appendContent(newArticles);
+            } else {
+                showNoMore();
+            }
+        }
+
+        // Show loading more indicator
+        function showLoadingMore() {
+            const contentDiv = document.getElementById('content');
+            const existingLoader = document.querySelector('.loading-more');
+            if (!existingLoader) {
+                contentDiv.insertAdjacentHTML('beforeend', '<div class="loading-more">Loading more...</div>');
+            }
+        }
+
+        // Show no more results
+        function showNoMore() {
+            const contentDiv = document.getElementById('content');
+            const existingLoader = document.querySelector('.loading-more');
+            const existingNoMore = document.querySelector('.no-more');
+            const existingMoreBtn = document.querySelector('.more-btn');
+            
+            if (existingLoader) existingLoader.remove();
+            if (existingMoreBtn) existingMoreBtn.remove();
+            
+            if (!existingNoMore) {
+                contentDiv.insertAdjacentHTML('beforeend', '<div class="no-more">No more articles to load</div>');
+            }
+        }
+
+        // Append new content
+        function appendContent(newArticles) {
+            const contentDiv = document.getElementById('content');
+            
+            // Remove loading indicator
+            const loader = document.querySelector('.loading-more');
+            if (loader) loader.remove();
+            
+            // Remove existing more button
+            const existingBtn = document.querySelector('.more-btn');
+            if (existingBtn) existingBtn.remove();
+            
+            // Filter articles by current tab
+            let filteredArticles = newArticles;
+            if (currentTab !== 'all') {
+                filteredArticles = newArticles.filter(article => {
+                    if (currentTab === 'reddit') return article.source === 'reddit';
+                    if (currentTab === 'hackernews') return article.source === 'hackernews';
+                    if (currentTab === 'mastodon') return article.source === 'mastodon';
+                    if (currentTab === 'rss') return article.source === 'rss';
+                    return true;
+                });
+            }
+            
+            // Sort by timestamp (newest first)
+            filteredArticles.sort((a, b) => b.timestamp - a.timestamp);
+            
+            // Append new articles
+            const articlesHtml = filteredArticles.map(article => {
+                const date = new Date(article.timestamp);
+                const timeAgo = getTimeAgo(date);
+                
+                let metaInfo = `${timeAgo} • ${article.source}`;
+                if (article.subreddit) metaInfo = `${timeAgo} • ${article.subreddit}`;
+                if (article.hashtag) metaInfo = `${timeAgo} • #${article.hashtag} • ${article.instance}`;
+                if (article.points) metaInfo += ` • ${article.points} points`;
+                if (article.score) metaInfo += ` • ${article.score} score`;
+                if (article.boosts !== undefined) metaInfo += ` • ${article.boosts} boosts`;
+                if (article.favorites !== undefined) metaInfo += ` • ${article.favorites} favorites`;
+                if (article.comments !== undefined) metaInfo += ` • ${article.comments} comments`;
+                
+                return `
+                    <div class="news-item" onclick="window.open('${article.url}', '_blank')">
+                        <a href="${article.url}" class="news-title" target="_blank" onclick="event.stopPropagation()">
+                            ${article.title}
+                        </a>
+                        <div class="news-meta">${metaInfo}</div>
+                        ${article.description ? `<div class="news-description">${article.description}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            // Insert before the no-more message if it exists
+            const noMore = document.querySelector('.no-more');
+            if (noMore) {
+                noMore.insertAdjacentHTML('beforebegin', articlesHtml);
+            } else {
+                contentDiv.insertAdjacentHTML('beforeend', articlesHtml);
+            }
+            
+            // Update displayed articles count
+            displayedArticles = [...displayedArticles, ...filteredArticles];
+            
+            // Add more button if there are more results
+            if (paginationState[currentTab].hasMore) {
+                contentDiv.insertAdjacentHTML('beforeend', 
+                    '<button class="more-btn" onclick="loadMore()">Load More</button>'
+                );
+            } else {
+                showNoMore();
+            }
+        }
+
+        // Refresh content
+        async function refreshContent() {
+            document.getElementById('content').innerHTML = '<div class="loading">Refreshing content...</div>';
+            
+            // Reset pagination state
+            resetPaginationState();
+            
+            // Clear old articles
+            const transaction = db.transaction([STORE_ARTICLES], 'readwrite');
+            transaction.objectStore(STORE_ARTICLES).clear();
+            
+            // Fetch new articles
+            const [hn, reddit, mastodon, rss] = await Promise.all([
+                fetchHackerNews(),
+                fetchReddit(),
+                fetchMastodon(),
+                fetchRSSFeeds()
+            ]);
+            
+            articles = [...hn, ...reddit, ...mastodon, ...rss];
+            renderContent();
+        }
+
+        // Render content
+        function renderContent() {
+            const contentDiv = document.getElementById('content');
+            
+            let filteredArticles = articles;
+            if (currentTab !== 'all') {
+                filteredArticles = articles.filter(article => {
+                    if (currentTab === 'reddit') return article.source === 'reddit';
+                    if (currentTab === 'hackernews') return article.source === 'hackernews';
+                    if (currentTab === 'mastodon') return article.source === 'mastodon';
+                    if (currentTab === 'rss') return article.source === 'rss';
+                    return true;
+                });
+            }
+            
+            // Sort by timestamp (newest first)
+            filteredArticles.sort((a, b) => b.timestamp - a.timestamp);
+            
+            // Store displayed articles
+            displayedArticles = filteredArticles;
+            
+            if (filteredArticles.length === 0) {
+                contentDiv.innerHTML = `
+                    <div class="empty-state">
+                        <h3>No articles found</h3>
+                        <p>Try refreshing the content or check your settings.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            contentDiv.innerHTML = filteredArticles.map(article => {
+                const date = new Date(article.timestamp);
+                const timeAgo = getTimeAgo(date);
+                
+                let metaInfo = `${timeAgo} • ${article.source}`;
+                if (article.subreddit) metaInfo = `${timeAgo} • ${article.subreddit}`;
+                if (article.hashtag) metaInfo = `${timeAgo} • #${article.hashtag} • ${article.instance}`;
+                if (article.points) metaInfo += ` • ${article.points} points`;
+                if (article.score) metaInfo += ` • ${article.score} score`;
+                if (article.boosts !== undefined) metaInfo += ` • ${article.boosts} boosts`;
+                if (article.favorites !== undefined) metaInfo += ` • ${article.favorites} favorites`;
+                if (article.comments !== undefined) metaInfo += ` • ${article.comments} comments`;
+                
+                return `
+                    <div class="news-item" onclick="window.open('${article.url}', '_blank')">
+                        <a href="${article.url}" class="news-title" target="_blank" onclick="event.stopPropagation()">
+                            ${article.title}
+                        </a>
+                        <div class="news-meta">${metaInfo}</div>
+                        ${article.description ? `<div class="news-description">${article.description}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            // Add more button if appropriate
+            if (paginationState[currentTab].hasMore && filteredArticles.length > 0) {
+                contentDiv.insertAdjacentHTML('beforeend', 
+                    '<button class="more-btn" onclick="loadMore()">Load More</button>'
+                );
+            }
+        }
+
+        // Time ago helper
+        function getTimeAgo(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            
+            let interval = seconds / 31536000;
+            if (interval > 1) return Math.floor(interval) + ' years ago';
+            
+            interval = seconds / 2592000;
+            if (interval > 1) return Math.floor(interval) + ' months ago';
+            
+            interval = seconds / 86400;
+            if (interval > 1) return Math.floor(interval) + ' days ago';
+            
+            interval = seconds / 3600;
+            if (interval > 1) return Math.floor(interval) + ' hours ago';
+            
+            interval = seconds / 60;
+            if (interval > 1) return Math.floor(interval) + ' minutes ago';
+            
+            return Math.floor(seconds) + ' seconds ago';
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab UI
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            renderContent();
+        }
+
+        // Settings modal functions
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('active');
+            
+            // Load current settings into form
+            document.getElementById('timeFilter').value = settings.timeFilter || 'week';
+            document.getElementById('hnSearchTerm').value = settings.hnSearchTerm || 'AI';
+            document.getElementById('redditSubreddits').value = settings.redditSubreddits || '';
+            document.getElementById('redditSearchTerms').value = settings.redditSearchTerms || '';
+            document.getElementById('mastodonInstance').value = settings.mastodonInstance || 'mastodon.social';
+            document.getElementById('mastodonHashtags').value = settings.mastodonHashtags || '';
+            renderRSSFeeds();
+            
+            // Add input validation for HN search term
+            const hnInput = document.getElementById('hnSearchTerm');
+            const hnWarning = document.getElementById('hnWarning');
+            
+            hnInput.addEventListener('input', function() {
+                const value = this.value.trim();
+                if (value.includes(' ')) {
+                    hnWarning.style.display = 'block';
+                    this.value = value.split(' ')[0]; // Take only the first word
+                } else {
+                    hnWarning.style.display = 'none';
+                }
+            });
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.remove('active');
+        }
+
+        function renderRSSFeeds() {
+            const container = document.getElementById('rssFeedsList');
+            container.innerHTML = settings.rssFeeds.map((feed, index) => `
+                <div class="rss-feed-item">
+                    <span class="rss-feed-url">${feed}</span>
+                    <button class="remove-feed-btn" onclick="removeRssFeed(${index})">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        function addRssFeed() {
+            const input = document.getElementById('newRssFeed');
+            const url = input.value.trim();
+            
+            if (url && !settings.rssFeeds.includes(url)) {
+                settings.rssFeeds.push(url);
+                input.value = '';
+                renderRSSFeeds();
+            }
+        }
+
+        function removeRssFeed(index) {
+            settings.rssFeeds.splice(index, 1);
+            renderRSSFeeds();
+        }
+
+        function saveSettings() {
+            const hnSearchTerm = document.getElementById('hnSearchTerm').value.trim();
+            
+            // Validate HN search term
+            if (hnSearchTerm.includes(' ')) {
+                alert('Please enter only one keyword for Hacker News search');
+                return;
+            }
+            
+            settings.timeFilter = document.getElementById('timeFilter').value;
+            settings.hnSearchTerm = hnSearchTerm || 'AI';
+            settings.redditSubreddits = document.getElementById('redditSubreddits').value;
+            settings.redditSearchTerms = document.getElementById('redditSearchTerms').value;
+            settings.mastodonInstance = document.getElementById('mastodonInstance').value;
+            settings.mastodonHashtags = document.getElementById('mastodonHashtags').value;
+            
+            saveSettingsDB().then(() => {
+                alert('Settings saved successfully!');
+                closeSettings();
+                // Reset pagination when settings change
+                resetPaginationState();
+            });
+        }
+
+        // Initialize app
+        async function init() {
+            try {
+                await initDB();
+                await loadSettings();
+                await loadArticles();
+                
+                if (articles.length === 0) {
+                    await refreshContent();
+                } else {
+                    renderContent();
+                }
+            } catch (error) {
+                console.error('Initialization error:', error);
+                document.getElementById('content').innerHTML = '<div class="error">Failed to initialize application. Please refresh the page.</div>';
+            }
+        }
+
+        // Start the app
+        init();
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('settingsModal');
+            if (event.target === modal) {
+                closeSettings();
+            }
+        }
+    </script>
+</body>
+</html>
