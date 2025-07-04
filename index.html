@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jim's AI News Aggregator</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#ff6600">
+    <title>AI News Aggregator</title>
     <style>
         * {
             margin: 0;
@@ -22,11 +26,14 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 20px;
+            padding-left: max(20px, env(safe-area-inset-left));
+            padding-right: max(20px, env(safe-area-inset-right));
         }
 
         header {
             background-color: #ff6600;
             padding: 10px 0;
+            padding-top: max(10px, env(safe-area-inset-top));
             position: fixed;
             top: 0;
             width: 100%;
@@ -50,6 +57,39 @@
             display: flex;
             gap: 15px;
             align-items: center;
+        }
+        
+        .time-filter-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .time-filter-container select {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e');
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 16px;
+            padding-right: 32px;
+        }
+        
+        .time-filter-container select:hover {
+            background-color: rgba(255,255,255,0.3);
+        }
+        
+        .time-filter-container select option {
+            background-color: #ff6600;
+            color: white;
         }
 
         .btn {
@@ -77,8 +117,9 @@
         }
 
         main {
-            margin-top: 70px;
+            margin-top: calc(70px + env(safe-area-inset-top));
             min-height: calc(100vh - 70px);
+            padding-bottom: env(safe-area-inset-bottom);
         }
 
         .tabs {
@@ -88,6 +129,10 @@
             margin-bottom: 20px;
             display: flex;
             gap: 0;
+            width: 100%;
+            min-height: 48px;
+            opacity: 1;
+            visibility: visible;
         }
 
         .tab {
@@ -119,12 +164,22 @@
             border-radius: 4px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
-            cursor: pointer;
         }
 
         .news-item:hover {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .comments-link {
+            color: #ff6600;
+            text-decoration: none;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        
+        .comments-link:hover {
+            text-decoration: underline;
         }
 
         .news-title {
@@ -290,6 +345,11 @@
             font-weight: 500;
             color: #555;
         }
+        
+        .form-group label input[type="checkbox"] {
+            margin-right: 8px;
+            vertical-align: middle;
+        }
 
         .form-group input,
         .form-group textarea {
@@ -397,22 +457,407 @@
         }
 
         @media (max-width: 768px) {
+            /* Header adjustments */
+            header {
+                padding: 15px 0;
+                padding-top: max(15px, env(safe-area-inset-top));
+            }
+            
             .header-content {
                 flex-direction: column;
-                gap: 10px;
+                gap: 12px;
+            }
+            
+            .logo {
+                font-size: 24px;
+                text-align: center;
+            }
+            
+            .header-actions {
+                width: 100%;
+                justify-content: center;
+                gap: 12px;
+            }
+            
+            .time-filter-container select {
+                padding: 10px 16px;
+                font-size: 15px;
+                min-height: 44px;
+                min-width: 80px;
+            }
+            
+            .btn {
+                padding: 10px 20px;
+                font-size: 16px;
+                min-height: 48px;
+            }
+            
+            .settings-btn {
+                font-size: 28px;
+                min-width: 48px;
+                min-height: 48px;
+            }
+            
+            /* Main content adjustments */
+            main {
+                margin-top: calc(100px + env(safe-area-inset-top));
+                padding-top: 0;
+            }
+            
+            .container {
+                padding: 0 12px;
+                padding-left: max(12px, env(safe-area-inset-left));
+                padding-right: max(12px, env(safe-area-inset-right));
+            }
+            
+            /* Ensure tabs stretch full width on mobile */
+            .container > .tabs {
+                margin-left: -12px;
+                margin-right: -12px;
+                padding-left: 12px;
+                width: calc(100% + 24px);
             }
 
+            /* Tabs adjustments */
             .tabs {
                 overflow-x: auto;
                 -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+                margin-bottom: 16px;
+                background-color: white;
+                border-bottom: 2px solid #ff6600;
+                border-top: 1px solid #ddd; /* Add border to make visible */
+                display: flex !important; /* Force display */
+                visibility: visible !important; /* Ensure visible */
+                min-height: 48px; /* Ensure minimum height */
+                position: relative; /* Not sticky on mobile */
+                top: auto;
+                z-index: 100;
+                width: 100%;
+            }
+            
+            /* Add scroll hint on mobile */
+            .tabs {
+                position: relative;
+            }
+            
+            .tabs::after {
+                content: '';
+                position: absolute;
+                right: 0;
+                top: 0;
+                bottom: 0;
+                width: 20px;
+                background: linear-gradient(to right, transparent, white);
+                pointer-events: none;
+            }
+            
+            .tabs::-webkit-scrollbar {
+                display: none;
             }
 
             .tab {
                 white-space: nowrap;
+                padding: 14px 20px;
+                min-height: 48px;
+                font-size: 15px;
+                flex-shrink: 0;
+                background-color: transparent;
+                color: #666;
             }
-
+            
+            .tab.active {
+                color: #ff6600;
+                font-weight: 600;
+                background-color: rgba(255, 102, 0, 0.05);
+            }
+            
+            /* News items adjustments */
+            .news-item {
+                padding: 16px 12px;
+                margin-bottom: 10px;
+                cursor: default;
+            }
+            
+            .news-title {
+                font-size: 16px;
+                line-height: 1.4;
+                margin-bottom: 10px;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+            }
+            
+            .news-meta {
+                font-size: 14px;
+                line-height: 1.6;
+                min-height: 24px;
+            }
+            
+            .news-description {
+                font-size: 14px;
+                line-height: 1.5;
+                max-height: 60px;
+            }
+            
+            .comments-link {
+                padding: 4px 8px;
+                display: inline-block;
+                min-height: 32px;
+                line-height: 24px;
+            }
+            
+            /* More button adjustments */
+            .more-btn {
+                width: 100%;
+                padding: 14px 24px;
+                font-size: 16px;
+                min-height: 48px;
+                margin: 16px 0;
+            }
+            
+            .loading, .loading-more, .no-more {
+                padding: 30px 20px;
+                font-size: 16px;
+            }
+            
+            .empty-state {
+                padding: 40px 20px;
+            }
+            
+            .empty-state h3 {
+                font-size: 20px;
+                margin-bottom: 12px;
+            }
+            
+            .empty-state p {
+                font-size: 16px;
+            }
+            
+            /* Modal adjustments */
             .modal-content {
+                width: 100%;
+                height: 100%;
+                max-width: 100%;
+                max-height: 100%;
+                border-radius: 0;
                 padding: 20px;
+                padding-top: calc(20px + env(safe-area-inset-top));
+                padding-bottom: calc(20px + env(safe-area-inset-bottom));
+                padding-left: max(20px, env(safe-area-inset-left));
+                padding-right: max(20px, env(safe-area-inset-right));
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            .modal-header {
+                margin-bottom: 20px;
+                position: sticky;
+                top: -20px;
+                background: white;
+                padding: 20px 0 10px;
+                z-index: 10;
+                margin-left: -20px;
+                margin-right: -20px;
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+            
+            .modal-title {
+                font-size: 22px;
+            }
+            
+            .close-btn {
+                font-size: 32px;
+                min-width: 48px;
+                min-height: 48px;
+            }
+            
+            /* Form elements adjustments */
+            .form-group input[type="text"],
+            .form-group input[type="url"],
+            .form-group textarea,
+            #timeFilter,
+            select {
+                font-size: 16px; /* Prevents zoom on iOS */
+                padding: 12px;
+                min-height: 48px;
+            }
+            
+            .form-group input[type="checkbox"] {
+                width: 20px;
+                height: 20px;
+                margin-right: 10px;
+                vertical-align: middle;
+            }
+            
+            .form-group label {
+                font-size: 16px;
+                margin-bottom: 8px;
+            }
+            
+            .settings-section h3 {
+                font-size: 20px;
+                margin-bottom: 16px;
+            }
+            
+            .add-feed-btn,
+            .remove-feed-btn,
+            .danger-btn {
+                min-height: 44px;
+                font-size: 15px;
+                padding: 10px 16px;
+            }
+            
+            .add-feed-container {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .add-feed-container input {
+                width: 100%;
+            }
+            
+            .add-feed-btn {
+                width: 100%;
+            }
+            
+            .rss-feed-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+                padding: 12px 0;
+            }
+            
+            .rss-feed-url {
+                margin-right: 0;
+                margin-bottom: 8px;
+            }
+            
+            .remove-feed-btn {
+                align-self: flex-start;
+            }
+            
+            /* Save Settings button full width on mobile */
+            .settings-section .btn[style*="width: 100%"] {
+                min-height: 48px;
+                font-size: 16px;
+            }
+            
+            /* Help text adjustments */
+            .form-group p,
+            .settings-section > p {
+                font-size: 14px;
+                line-height: 1.5;
+            }
+            
+            .warning-text {
+                font-size: 14px;
+            }
+        }
+        
+        /* Touch device optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .news-item:hover {
+                transform: none;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+            
+            .btn:hover,
+            .settings-btn:hover,
+            .more-btn:hover,
+            .add-feed-btn:hover,
+            .remove-feed-btn:hover,
+            .danger-btn:hover,
+            .close-btn:hover {
+                /* Remove hover effects on touch devices */
+                opacity: 1;
+            }
+            
+            /* Add active states for better touch feedback */
+            .btn:active,
+            .settings-btn:active,
+            .more-btn:active,
+            .tab:active {
+                opacity: 0.8;
+                transform: scale(0.98);
+            }
+        }
+        
+        /* Ensure minimum tap targets */
+        a, button, input, select, textarea {
+            min-height: 44px;
+        }
+        
+        /* Prevent horizontal scroll */
+        html, body {
+            overflow-x: hidden;
+        }
+        
+        /* Ensure tabs are always visible */
+        @media screen and (max-width: 768px) {
+            .tabs {
+                display: flex !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+        }
+        
+        /* Platform-specific adjustments */
+        @supports (-webkit-touch-callout: none) {
+            /* iOS specific */
+            input, textarea, select {
+                font-size: 16px !important; /* Prevent zoom on input focus */
+            }
+            
+            /* Ensure time filter doesn't zoom on iOS */
+            .time-filter-container select {
+                font-size: 16px !important;
+            }
+        }
+        
+        /* Improve readability on small screens */
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 8px;
+                padding-left: max(8px, env(safe-area-inset-left));
+                padding-right: max(8px, env(safe-area-inset-right));
+            }
+            
+            .news-item {
+                padding: 14px 10px;
+            }
+            
+            .tab {
+                padding: 14px 16px;
+                font-size: 14px;
+            }
+            
+            /* Compact header on very small screens */
+            .logo {
+                font-size: 20px;
+            }
+            
+            .header-actions {
+                gap: 8px;
+            }
+            
+            .btn {
+                padding: 8px 12px;
+                font-size: 14px;
+            }
+            
+            .settings-btn {
+                font-size: 24px;
+                min-width: 40px;
+                min-height: 40px;
+            }
+            
+            .time-filter-container select {
+                padding: 8px 12px;
+                font-size: 14px;
+                min-width: 70px;
             }
         }
     </style>
@@ -421,8 +866,15 @@
     <header>
         <div class="container">
             <div class="header-content">
-                <div class="logo">Jim's AI News Aggregator</div>
+                <div class="logo">AI News Aggregator</div>
                 <div class="header-actions">
+                    <div class="time-filter-container">
+                        <select id="timeFilterMain" onchange="updateTimeFilter(this.value)">
+                            <option value="day">24h</option>
+                            <option value="week" selected>Week</option>
+                            <option value="all">All</option>
+                        </select>
+                    </div>
                     <button class="btn" onclick="refreshContent()">↻ Refresh</button>
                     <button class="settings-btn" onclick="openSettings()">⚙</button>
                 </div>
@@ -432,12 +884,12 @@
 
     <main>
         <div class="container">
-            <div class="tabs">
-                <button class="tab active" onclick="switchTab('all')">All</button>
-                <button class="tab" onclick="switchTab('hackernews')">Hacker News</button>
-                <button class="tab" onclick="switchTab('reddit')">Reddit</button>
-                <button class="tab" onclick="switchTab('mastodon')">Mastodon</button>
-                <button class="tab" onclick="switchTab('rss')">RSS Feeds</button>
+            <div class="tabs" id="tabsContainer">
+                <button class="tab active" onclick="switchTab('all', event)">All</button>
+                <button class="tab" onclick="switchTab('hackernews', event)">Hacker News</button>
+                <button class="tab" onclick="switchTab('reddit', event)">Reddit</button>
+                <button class="tab" onclick="switchTab('mastodon', event)">Mastodon</button>
+                <button class="tab" onclick="switchTab('rss', event)">RSS Feeds</button>
             </div>
 
             <div id="content">
@@ -457,12 +909,11 @@
             <div class="settings-section">
                 <h3>General Settings</h3>
                 <div class="form-group">
-                    <label for="timeFilter">Time Filter</label>
-                    <select id="timeFilter" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
-                        <option value="day">Last 24 Hours</option>
-                        <option value="week" selected>Last Week</option>
-                        <option value="all">All Time</option>
-                    </select>
+                    <label style="display: flex; align-items: center; font-weight: normal;">
+                        <input type="checkbox" id="filterNonEnglish" checked style="margin-right: 8px;">
+                        Filter out non-English articles
+                    </label>
+                    <p style="font-size: 12px; color: #666; margin-top: 5px;">When enabled, articles in languages other than English will be hidden</p>
                 </div>
             </div>
 
@@ -548,7 +999,8 @@
             rssFeeds: [
                 'https://www.artificialintelligence-news.com/feed/',
                 'https://openai.com/blog/rss.xml'
-            ]
+            ],
+            filterNonEnglish: true
         };
 
         // Pagination state
@@ -626,7 +1078,8 @@
             return new Promise((resolve) => {
                 const request = store.getAll();
                 request.onsuccess = () => {
-                    articles = request.result || [];
+                    const loadedArticles = request.result || [];
+                    articles = deduplicateArticles(loadedArticles);
                     resolve(articles);
                 };
                 request.onerror = () => resolve([]);
@@ -666,7 +1119,8 @@
                     redditSearchTerms: '',
                     mastodonInstance: 'mastodon.social',
                     mastodonHashtags: '#AI, #ArtificialIntelligence, #MachineLearning',
-                    rssFeeds: []
+                    rssFeeds: [],
+                    filterNonEnglish: true
                 };
                 resetPaginationState();
                 renderContent();
@@ -684,6 +1138,94 @@
                 rss: { hasMore: false, loading: false },
                 all: { hasMore: true, loading: false }
             };
+        }
+
+        // Simple language detection - returns true if likely English
+        function isLikelyEnglish(text) {
+            if (!text) return true; // If no text, assume English
+            
+            // Combine title and description for better detection
+            const fullText = text.toLowerCase();
+            
+            // Check for specific non-English scripts first
+            const nonEnglishScripts = [
+                /[\u4e00-\u9fff]/, // Chinese characters (CJK Unified Ideographs)
+                /[\u3040-\u309f]/, // Japanese hiragana
+                /[\u30a0-\u30ff]/, // Japanese katakana
+                /[\uac00-\ud7af]/, // Korean hangul
+                /[\u0600-\u06ff]/, // Arabic
+                /[\u0400-\u04ff]/, // Cyrillic
+                /[\u0900-\u097f]/, // Devanagari (Hindi)
+                /[\u0980-\u09ff]/, // Bengali
+                /[\u0a00-\u0a7f]/, // Gurmukhi (Punjabi)
+                /[\u0e00-\u0e7f]/, // Thai
+                /[\u1000-\u109f]/, // Myanmar
+                /[\u0100-\u017f]/, // Latin Extended-A (includes many European language characters)
+                /[\u0180-\u024f]/, // Latin Extended-B
+            ];
+            
+            // If any non-English script is detected, it's not English
+            for (const pattern of nonEnglishScripts) {
+                if (pattern.test(fullText)) {
+                    return false;
+                }
+            }
+            
+            // Check for high percentage of non-basic Latin characters
+            const basicLatinRegex = /[a-zA-Z0-9\s\.\,\!\?\-\:\;\'\"\(\)\[\]\{\}\/\\\@\#\$\%\^\&\*\_\+\=\~\`]/g;
+            const basicLatinMatches = fullText.match(basicLatinRegex) || [];
+            const basicLatinRatio = basicLatinMatches.length / fullText.length;
+            
+            // If less than 80% basic Latin characters, likely not English
+            if (basicLatinRatio < 0.8) {
+                return false;
+            }
+            
+            // Check for common non-English words/patterns
+            const nonEnglishWords = [
+                /\b(de|le|la|les|un|une|et|pour|dans|sur|avec|est|sont)\b/i, // French
+                /\b(der|die|das|ist|und|für|mit|von|zu|bei|sind|wird)\b/i, // German
+                /\b(el|la|los|las|y|por|con|para|es|está|son)\b/i, // Spanish
+                /\b(il|lo|la|gli|le|di|da|per|con|che|sono|è)\b/i, // Italian
+                /\b(de|o|a|os|as|para|com|por|em|no|na|é|são)\b/i, // Portuguese
+                /\b(это|что|как|для|или|быть)\b/i, // Russian (transliterated)
+                /\b(は|が|を|に|の|と|で|から|まで|より)\b/i, // Japanese particles
+            ];
+            
+            let nonEnglishWordCount = 0;
+            for (const pattern of nonEnglishWords) {
+                const matches = fullText.match(pattern) || [];
+                nonEnglishWordCount += matches.length;
+            }
+            
+            // If too many non-English common words, likely not English
+            const wordCount = fullText.split(/\s+/).filter(w => w.length > 0).length;
+            if (wordCount > 3 && nonEnglishWordCount / wordCount > 0.2) {
+                return false;
+            }
+            
+            // Additional check for URLs containing non-English domains
+            const nonEnglishDomains = /\.(jp|kr|cn|tw|fr|de|es|it|ru|br|mx|ar|th|vn|id|my|ph)\//i;
+            if (nonEnglishDomains.test(fullText)) {
+                // If it has a non-English domain, check more strictly
+                if (basicLatinRatio < 0.9) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+
+        // Deduplicate articles by ID
+        function deduplicateArticles(articlesArray) {
+            const seen = new Set();
+            return articlesArray.filter(article => {
+                if (seen.has(article.id)) {
+                    return false;
+                }
+                seen.add(article.id);
+                return true;
+            });
         }
 
         // Helper function to filter by time
@@ -723,6 +1265,29 @@
                 console.log('HN API response:', searchData);
                 console.log(`Found ${searchData.hits ? searchData.hits.length : 0} HN stories on page ${page}`);
                 
+                // Additional filtering for exact word matching
+                if (searchData.hits && searchData.hits.length > 0) {
+                    // Create regex for word boundary matching
+                    const searchRegex = new RegExp(`\\b${searchTerm.toLowerCase()}\\b`);
+                    
+                    searchData.hits = searchData.hits.filter(story => {
+                        const title = (story.title || '').toLowerCase();
+                        const text = (story.story_text || '').toLowerCase();
+                        
+                        // Check if English (if filter is enabled)
+                        if (settings.filterNonEnglish && !isLikelyEnglish(story.title + ' ' + (story.story_text || ''))) {
+                            return false;
+                        }
+                        
+                        // Check for whole word match
+                        return searchRegex.test(title) || searchRegex.test(text) ||
+                               // Also check for common AI-related terms
+                               /\b(artificial intelligence|machine learning|neural|deep learning)\b/i.test(title + ' ' + text);
+                    });
+                    
+                    console.log(`${searchData.hits.length} stories after word boundary filtering`);
+                };
+                
                 // Check if there are more pages
                 paginationState.hackernews.hasMore = page < searchData.nbPages - 1;
                 
@@ -732,7 +1297,18 @@
                 }
                 
                 const hnArticles = searchData.hits
-                    .filter(story => filterByTime(new Date(story.created_at).getTime()))
+                    .filter(story => {
+                        // Check if English (if filter is enabled)
+                        if (settings.filterNonEnglish) {
+                            const textToCheck = `${story.title || ''} ${story.story_text || ''}`;
+                            if (!isLikelyEnglish(textToCheck)) {
+                                console.log(`Filtered non-English story: ${story.title}`);
+                                return false;
+                            }
+                        }
+                        // Check time filter
+                        return filterByTime(new Date(story.created_at).getTime());
+                    })
                     .map(story => ({
                         id: `hn_${story.objectID}`,
                         title: story.title || 'Untitled',
@@ -807,9 +1383,20 @@
                     }
                     
                     const posts = data.data.children
-                        .filter(post => filterByTime(post.data.created_utc * 1000))
+                        .filter(post => {
+                            // Check if English (if filter is enabled)
+                            if (settings.filterNonEnglish) {
+                                const textToCheck = `${post.data.title} ${post.data.selftext || ''}`;
+                                if (!isLikelyEnglish(textToCheck)) {
+                                    console.log(`Filtered non-English Reddit post: ${post.data.title}`);
+                                    return false;
+                                }
+                            }
+                            // Check time filter
+                            return filterByTime(post.data.created_utc * 1000);
+                        })
                         .map(post => ({
-                            id: `reddit_${post.data.id}_${Date.now()}`,
+                            id: `reddit_${post.data.id}`,
                             title: post.data.title,
                             url: post.data.url.includes('reddit.com/r/') ? post.data.url : post.data.url,
                             description: post.data.selftext ? post.data.selftext.substring(0, 200) + '...' : '',
@@ -872,9 +1459,20 @@
                     }
                     
                     const posts = toots
-                        .filter(toot => filterByTime(new Date(toot.created_at).getTime()))
+                        .filter(toot => {
+                            // Check if English (if filter is enabled)
+                            if (settings.filterNonEnglish) {
+                                const textContent = toot.content.replace(/<[^>]*>/g, '');
+                                if (!isLikelyEnglish(textContent)) {
+                                    console.log(`Filtered non-English Mastodon post: ${textContent.substring(0, 50)}...`);
+                                    return false;
+                                }
+                            }
+                            // Check time filter
+                            return filterByTime(new Date(toot.created_at).getTime());
+                        })
                         .map(toot => ({
-                            id: `mastodon_${toot.id}_${Date.now()}`,
+                            id: `mastodon_${toot.id}`,
                             title: toot.content.replace(/<[^>]*>/g, '').substring(0, 100) + '...',
                             url: toot.url,
                             description: toot.content.replace(/<[^>]*>/g, '').substring(0, 200) + '...',
@@ -963,12 +1561,26 @@
                         const description = item.querySelector('description')?.textContent || '';
                         const pubDate = item.querySelector('pubDate')?.textContent || '';
                         
+                        // Check if English (if filter is enabled)
+                        if (settings.filterNonEnglish) {
+                            const textToCheck = `${title} ${description}`;
+                            if (!isLikelyEnglish(textToCheck)) {
+                                console.log(`Filtered non-English RSS item: ${title}`);
+                                return;
+                            }
+                        }
+                        
                         const timestamp = pubDate ? new Date(pubDate).getTime() : Date.now();
                         
                         // Apply time filter
                         if (filterByTime(timestamp)) {
+                            // Generate a consistent ID based on the URL or title
+                            const articleId = link ? 
+                                `rss_${btoa(link).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20)}` : 
+                                `rss_${btoa(title).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20)}`;
+                            
                             const article = {
-                                id: `rss_${feedUrl}_${index}_${Date.now()}`,
+                                id: articleId,
                                 title: title,
                                 url: link,
                                 description: description.replace(/<[^>]*>/g, '').substring(0, 200) + '...',
@@ -1036,8 +1648,17 @@
             paginationState[currentTab].loading = false;
             
             if (newArticles.length > 0) {
-                articles = [...articles, ...newArticles];
-                appendContent(newArticles);
+                // Deduplicate before adding to main articles array
+                const existingIds = new Set(articles.map(a => a.id));
+                const uniqueNewArticles = newArticles.filter(article => !existingIds.has(article.id));
+                
+                if (uniqueNewArticles.length > 0) {
+                    articles = [...articles, ...uniqueNewArticles];
+                    appendContent(uniqueNewArticles);
+                } else {
+                    // All new articles were duplicates
+                    showNoMore();
+                }
             } else {
                 showNoMore();
             }
@@ -1102,18 +1723,26 @@
                 let metaInfo = `${timeAgo} • ${article.source}`;
                 if (article.subreddit) metaInfo = `${timeAgo} • ${article.subreddit}`;
                 if (article.hashtag) metaInfo = `${timeAgo} • #${article.hashtag} • ${article.instance}`;
-                if (article.points) metaInfo += ` • ${article.points} points`;
-                if (article.score) metaInfo += ` • ${article.score} score`;
+                if (article.points !== undefined) metaInfo += ` • ${article.points} points`;
+                if (article.score !== undefined) metaInfo += ` • ${article.score} score`;
                 if (article.boosts !== undefined) metaInfo += ` • ${article.boosts} boosts`;
                 if (article.favorites !== undefined) metaInfo += ` • ${article.favorites} favorites`;
-                if (article.comments !== undefined) metaInfo += ` • ${article.comments} comments`;
+                
+                // Handle comments link for Hacker News
+                let commentsLink = '';
+                if (article.source === 'hackernews' && article.comments !== undefined) {
+                    const hnItemId = article.id.replace('hn_', '');
+                    commentsLink = ` • <a href="https://news.ycombinator.com/item?id=${hnItemId}" class="comments-link" target="_blank" onclick="event.stopPropagation()">${article.comments} comments</a>`;
+                } else if (article.comments !== undefined) {
+                    metaInfo += ` • ${article.comments} comments`;
+                }
                 
                 return `
-                    <div class="news-item" onclick="window.open('${article.url}', '_blank')">
-                        <a href="${article.url}" class="news-title" target="_blank" onclick="event.stopPropagation()">
+                    <div class="news-item">
+                        <a href="${article.url}" class="news-title" target="_blank">
                             ${article.title}
                         </a>
-                        <div class="news-meta">${metaInfo}</div>
+                        <div class="news-meta">${metaInfo}${commentsLink}</div>
                         ${article.description ? `<div class="news-description">${article.description}</div>` : ''}
                     </div>
                 `;
@@ -1159,13 +1788,19 @@
                 fetchRSSFeeds()
             ]);
             
-            articles = [...hn, ...reddit, ...mastodon, ...rss];
+            articles = deduplicateArticles([...hn, ...reddit, ...mastodon, ...rss]);
             renderContent();
         }
 
         // Render content
         function renderContent() {
             const contentDiv = document.getElementById('content');
+            
+            // Debug: Check tabs visibility after render
+            const tabsContainer = document.getElementById('tabsContainer');
+            if (tabsContainer) {
+                console.log('Tabs visibility after render:', window.getComputedStyle(tabsContainer).display);
+            }
             
             let filteredArticles = articles;
             if (currentTab !== 'all') {
@@ -1201,18 +1836,26 @@
                 let metaInfo = `${timeAgo} • ${article.source}`;
                 if (article.subreddit) metaInfo = `${timeAgo} • ${article.subreddit}`;
                 if (article.hashtag) metaInfo = `${timeAgo} • #${article.hashtag} • ${article.instance}`;
-                if (article.points) metaInfo += ` • ${article.points} points`;
-                if (article.score) metaInfo += ` • ${article.score} score`;
+                if (article.points !== undefined) metaInfo += ` • ${article.points} points`;
+                if (article.score !== undefined) metaInfo += ` • ${article.score} score`;
                 if (article.boosts !== undefined) metaInfo += ` • ${article.boosts} boosts`;
                 if (article.favorites !== undefined) metaInfo += ` • ${article.favorites} favorites`;
-                if (article.comments !== undefined) metaInfo += ` • ${article.comments} comments`;
+                
+                // Handle comments link for Hacker News
+                let commentsLink = '';
+                if (article.source === 'hackernews' && article.comments !== undefined) {
+                    const hnItemId = article.id.replace('hn_', '');
+                    commentsLink = ` • <a href="https://news.ycombinator.com/item?id=${hnItemId}" class="comments-link" target="_blank" onclick="event.stopPropagation()">${article.comments} comments</a>`;
+                } else if (article.comments !== undefined) {
+                    metaInfo += ` • ${article.comments} comments`;
+                }
                 
                 return `
-                    <div class="news-item" onclick="window.open('${article.url}', '_blank')">
-                        <a href="${article.url}" class="news-title" target="_blank" onclick="event.stopPropagation()">
+                    <div class="news-item">
+                        <a href="${article.url}" class="news-title" target="_blank">
                             ${article.title}
                         </a>
-                        <div class="news-meta">${metaInfo}</div>
+                        <div class="news-meta">${metaInfo}${commentsLink}</div>
                         ${article.description ? `<div class="news-description">${article.description}</div>` : ''}
                     </div>
                 `;
@@ -1248,13 +1891,30 @@
             return Math.floor(seconds) + ' seconds ago';
         }
 
+        // Update time filter from main dropdown
+        function updateTimeFilter(value) {
+            settings.timeFilter = value;
+            saveSettingsDB().then(() => {
+                refreshContent();
+            });
+        }
+
         // Tab switching
-        function switchTab(tab) {
+        function switchTab(tab, event) {
             currentTab = tab;
             
             // Update tab UI
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
+            if (event && event.target) {
+                event.target.classList.add('active');
+            } else {
+                // Fallback: find the tab by its onclick attribute
+                document.querySelectorAll('.tab').forEach(t => {
+                    if (t.onclick && t.onclick.toString().includes(tab)) {
+                        t.classList.add('active');
+                    }
+                });
+            }
             
             renderContent();
         }
@@ -1264,7 +1924,7 @@
             document.getElementById('settingsModal').classList.add('active');
             
             // Load current settings into form
-            document.getElementById('timeFilter').value = settings.timeFilter || 'week';
+            document.getElementById('filterNonEnglish').checked = settings.filterNonEnglish !== false;
             document.getElementById('hnSearchTerm').value = settings.hnSearchTerm || 'AI';
             document.getElementById('redditSubreddits').value = settings.redditSubreddits || '';
             document.getElementById('redditSearchTerms').value = settings.redditSearchTerms || '';
@@ -1326,7 +1986,7 @@
                 return;
             }
             
-            settings.timeFilter = document.getElementById('timeFilter').value;
+            settings.filterNonEnglish = document.getElementById('filterNonEnglish').checked;
             settings.hnSearchTerm = hnSearchTerm || 'AI';
             settings.redditSubreddits = document.getElementById('redditSubreddits').value;
             settings.redditSearchTerms = document.getElementById('redditSearchTerms').value;
@@ -1346,6 +2006,19 @@
             try {
                 await initDB();
                 await loadSettings();
+                
+                // Sync time filter dropdown with settings
+                document.getElementById('timeFilterMain').value = settings.timeFilter || 'week';
+                
+                // Debug: Check if tabs are visible
+                const tabsContainer = document.getElementById('tabsContainer');
+                if (tabsContainer) {
+                    console.log('Tabs container found:', tabsContainer);
+                    console.log('Tabs container display:', window.getComputedStyle(tabsContainer).display);
+                    console.log('Tabs container visibility:', window.getComputedStyle(tabsContainer).visibility);
+                    console.log('Number of tab buttons:', tabsContainer.querySelectorAll('.tab').length);
+                }
+                
                 await loadArticles();
                 
                 if (articles.length === 0) {
