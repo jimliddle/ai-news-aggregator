@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#1a1a2e">
     <meta name="description" content="AI News Hub — curated AI news from multiple sources">
     <link rel="manifest" id="pwa-manifest">
-    <title>Jim's AI News Aggregator</title>
+    <title>AI News Hub</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -68,6 +68,58 @@
         html.eink .comments-toggle { background: #f5f5f5; border: 1px solid #aaa; color: #111; }
         html.eink .comment-author { color: #111; }
         html.eink .comment-nested { border-left-color: #bbb; }
+
+        /* Midnight — Apple Health inspired */
+        html.midnight {
+            --bg: #000000; --bg-surface: #1c1c1e; --bg-elevated: #2c2c2e;
+            --text: #f5f5f7; --text-secondary: #8e8e93;
+            --accent: #0a84ff; --accent-glow: rgba(10, 132, 255, 0.15); --accent-bright: #64d2ff;
+            --border: rgba(255,255,255,0.08); --border-hover: rgba(255,255,255,0.16);
+            --success: #30d158; --warning: #ffd60a; --error: #ff453a;
+            --font: -apple-system, 'SF Pro Display', BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            --mono: 'SF Mono', 'Menlo', monospace;
+            --radius: 13px;
+            --shadow: 0 2px 12px rgba(0,0,0,0.6);
+        }
+        html.midnight body { background: #000; }
+        html.midnight header { background: rgba(0,0,0,0.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border-bottom: 1px solid rgba(255,255,255,0.06); }
+        html.midnight .logo { font-weight: 600; letter-spacing: -0.5px; }
+        html.midnight .logo span { color: #0a84ff; }
+        html.midnight .stats-bar { background: #1c1c1e; border: none; border-radius: 13px; }
+        html.midnight .stat-value { color: #0a84ff; font-weight: 700; }
+        html.midnight .stat-label { color: #8e8e93; font-size: 10px; letter-spacing: 1px; }
+        html.midnight .tabs { background: #1c1c1e; border: none; border-radius: 13px; padding: 4px; }
+        html.midnight .tab { border-radius: 10px; font-weight: 500; font-size: 13px; padding: 8px 14px; }
+        html.midnight .tab:hover { background: #2c2c2e; }
+        html.midnight .tab.active { background: #0a84ff; color: #fff; }
+        html.midnight .news-item { background: #1c1c1e; border: none; border-left: 3px solid transparent; border-radius: 13px; margin-bottom: 10px; }
+        html.midnight .news-item:hover { border-left-color: #0a84ff; background: #222224; transform: none; }
+        html.midnight .news-title { font-weight: 600; letter-spacing: -0.2px; }
+        html.midnight .news-title:hover { color: #0a84ff; }
+        html.midnight .badge-hackernews { background: #ff9f0a18; color: #ff9f0a; border: none; }
+        html.midnight .badge-reddit { background: #ff453a18; color: #ff453a; border: none; }
+        html.midnight .badge-arxiv { background: #bf5af218; color: #bf5af2; border: none; }
+        html.midnight .badge-github { background: #30d15818; color: #30d158; border: none; }
+        html.midnight .badge-rss { background: #ff9f0a18; color: #ff9f0a; border: none; }
+        html.midnight .badge-mastodon { background: #64d2ff18; color: #64d2ff; border: none; }
+        html.midnight .ai-score { color: #30d158; }
+        html.midnight .btn, html.midnight .settings-btn { background: #2c2c2e; border: none; color: #f5f5f7; border-radius: 10px; }
+        html.midnight .btn:hover, html.midnight .settings-btn:hover { background: #3a3a3c; }
+        html.midnight .time-filter-container select { background: #2c2c2e; border: none; color: #f5f5f7; border-radius: 10px; }
+        html.midnight .more-btn { background: #0a84ff; color: #fff; border: none; border-radius: 13px; font-weight: 600; }
+        html.midnight .more-btn:hover { background: #0070e0; }
+        html.midnight .install-prompt { background: #1c1c1e; border: none; border-radius: 13px; }
+        html.midnight .modal-content { background: #1c1c1e; border: none; border-radius: 16px; }
+        html.midnight .modal-header { background: #2c2c2e; border-radius: 16px 16px 0 0; }
+        html.midnight .modal-body input[type="text"], html.midnight .modal-body select { background: #2c2c2e; border: none; color: #f5f5f7; border-radius: 10px; }
+        html.midnight .save-btn { background: #0a84ff; border: none; border-radius: 13px; font-weight: 600; }
+        html.midnight .save-btn:hover { background: #0070e0; }
+        html.midnight .cmt-toggle { color: #0a84ff; }
+        html.midnight .cmt-toggle:hover { background: rgba(10, 132, 255, 0.1); }
+        html.midnight .comment { border-left-color: #3a3a3c; }
+        html.midnight .cmt-author { color: #f5f5f7; }
+        html.midnight .cmt-score { color: #ff453a; }
+        html.midnight .comments-link { color: #0a84ff; }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -263,7 +315,7 @@
     <header>
         <div class="container">
             <div class="header-content">
-                <div class="logo">⚡ Jim's AI <span>News Aggregator</span></div>
+                <div class="logo">⚡ Jim's AI <span>News Hub</span></div>
                 <div class="header-actions">
                     <div class="time-filter-container">
                         <select id="timeFilterMain" onchange="App.updateTimeFilter(this.value)">
@@ -271,7 +323,7 @@
                             <option value="week" selected>Week</option>
                             <option value="all">All</option>
                         </select>
-                    </div>
+                    </div>f
                     <button class="btn" onclick="App.refresh()">↻ Refresh</button>
                     <button class="settings-btn" onclick="App.openSettings()">⚙</button>
                 </div>
@@ -281,7 +333,7 @@
 
     <main><div class="container">
         <div id="installPrompt" class="install-prompt">
-            <span>📱 Install Jim's AI News Aggregator</span>
+            <span>📱 Install AI News Hub for quick access</span>
             <button class="btn" onclick="App.installPWA()" style="min-height:36px">Install</button>
         </div>
         <div class="stats-bar">
@@ -309,7 +361,7 @@
             <div class="modal-body">
                 <div class="sg"><label class="cbl"><input type="checkbox" id="sFilterEn" checked> Filter non-English articles</label></div>
                 <div class="sg"><label class="cbl"><input type="checkbox" id="sStrict" checked> Strict AI filtering</label><p class="hint">Aggressively filters non-AI content. Turn off to see all posts.</p></div>
-                <div class="sg"><label class="cbl"><input type="checkbox" id="sEink" checked> E-ink display mode</label><p class="hint">High contrast B&W, no animations — for e-ink screens.</p></div>
+                <div class="sg"><label>Theme</label><select id="sTheme"><option value="dark">Dark (default)</option><option value="eink">E-ink</option><option value="midnight">Midnight </option></select></div>
                 <div class="sg"><label>HN Search Term</label><input type="text" id="sHN" value="AI"><p class="hint">Single keyword for Algolia HN API.</p></div>
                 <div class="sg"><label>Reddit Subreddits</label><input type="text" id="sRedditSubs" value="r/artificial, r/MachineLearning, r/singularity, r/OpenAI, r/LocalLLaMA"></div>
                 <div class="sg"><label>Reddit Max Age (hours)</label><input type="text" id="sRedditAge" value="24"><p class="hint">Show posts from the last N hours. Default: 24.</p></div>
@@ -388,9 +440,24 @@ const App = (function() {
     // =================== LANG ===================
     function isEnglish(text) {
         if (!text) return true;
+        // Quick reject: CJK, Japanese, Korean, Arabic, Cyrillic, Devanagari, Thai
         if (/[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af\u0600-\u06ff\u0400-\u04ff\u0900-\u097f\u0e00-\u0e7f]/.test(text)) return false;
-        var m = text.match(/[a-zA-Z0-9\s.,!?;:'"()\-\/\\@#$%^&*_+=~`]/g) || [];
-        return (m.length / text.length) >= 0.8;
+        // Quick reject: heavy use of non-ASCII Latin diacritics (Czech, Turkish, Polish, etc.)
+        var diacritics = text.match(/[àáâãäåæçèéêëìíîïðñòóôõöùúûüýþÿšžčřďťňůěőűąćęłńśźżğışöüÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖÙÚÛÜÝÞŠŽČŘĎŤŇŮĚŐŰĄĆĘŁŃŚŹŻĞİŞÖÜ]/g) || [];
+        var words = text.split(/\s+/).filter(Boolean);
+        if (words.length > 3 && diacritics.length / words.length > 0.4) return false;
+        // Check for common English stop words — English text almost always contains several
+        var lc = ' ' + text.toLowerCase() + ' ';
+        var eng = [' the ',' is ',' are ',' was ',' were ',' and ',' for ',' that ',' this ',' with ',' from ',' have ',' has ',' will ',' can ',' not ',' but ',' you ',' your ',' what ',' how ',' about ',' into ',' been ',' would ',' should ',' could ',' which ',' their ',' there ',' when ',' than '];
+        var hits = 0;
+        for (var i = 0; i < eng.length; i++) { if (lc.indexOf(eng[i]) !== -1) hits++; }
+        // Short texts (under 5 words) get a pass if mostly ASCII
+        if (words.length < 5) {
+            var asc = text.match(/[a-zA-Z0-9\s.,!?;:'"()\-\/@#$%^&*_+=~`]/g) || [];
+            return (asc.length / text.length) >= 0.8;
+        }
+        // Longer texts need at least 2 English stop words
+        return hits >= 2;
     }
 
     // =================== STATE ===================
@@ -415,7 +482,7 @@ const App = (function() {
         rssFeeds: ['https://www.artificialintelligence-news.com/feed/', 'https://openai.com/news/rss.xml', 'https://simonwillison.net/atom/everything/'],
         filterNonEnglish: true,
         strictFiltering: true,
-        einkMode: true
+        theme: 'eink'
     };
 
     var pag = {};
@@ -1089,16 +1156,20 @@ const App = (function() {
         render();
     }
 
-    function applyEink() {
-        document.documentElement.classList.toggle('eink', cfg.einkMode);
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', cfg.einkMode ? '#ffffff' : '#1a1a2e');
+    function applyTheme() {
+        var r = document.documentElement;
+        r.classList.remove('eink', 'midnight');
+        if (cfg.theme === 'eink') r.classList.add('eink');
+        else if (cfg.theme === 'midnight') r.classList.add('midnight');
+        var colors = { dark: '#1a1a2e', eink: '#ffffff', midnight: '#000000' };
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', colors[cfg.theme] || colors.dark);
     }
 
     function openSettings() {
         document.getElementById('settingsModal').classList.add('active');
         document.getElementById('sFilterEn').checked = cfg.filterNonEnglish !== false;
         document.getElementById('sStrict').checked = cfg.strictFiltering !== false;
-        document.getElementById('sEink').checked = cfg.einkMode !== false;
+        document.getElementById('sTheme').value = cfg.theme || 'eink';
         document.getElementById('sHN').value = cfg.hnSearchTerm || 'AI';
         document.getElementById('sRedditSubs').value = cfg.redditSubreddits || '';
         document.getElementById('sRedditAge').value = cfg.redditMaxAge || 1;
@@ -1130,14 +1201,14 @@ const App = (function() {
     function saveSettings() {
         cfg.filterNonEnglish = document.getElementById('sFilterEn').checked;
         cfg.strictFiltering = document.getElementById('sStrict').checked;
-        cfg.einkMode = document.getElementById('sEink').checked;
+        cfg.theme = document.getElementById('sTheme').value || 'dark';
         cfg.hnSearchTerm = document.getElementById('sHN').value.trim() || 'AI';
         cfg.redditSubreddits = document.getElementById('sRedditSubs').value;
         cfg.redditMaxAge = parseFloat(document.getElementById('sRedditAge').value) || 1;
         cfg.arxivCategories = document.getElementById('sArxiv').value;
         cfg.mastodonInstance = document.getElementById('sMastInst').value;
         cfg.mastodonHashtags = document.getElementById('sMastTags').value;
-        applyEink();
+        applyTheme();
         saveCfg().then(function() { closeSettings(); resetPag(); refresh(); });
     }
 
@@ -1147,8 +1218,8 @@ const App = (function() {
             var tx = db.transaction(['settings'], 'readwrite');
             tx.objectStore('settings').clear();
             articles = []; totalFetched = 0; commentCache = {};
-            cfg = {timeFilter:'week',hnSearchTerm:'AI',redditSubreddits:'r/artificial, r/MachineLearning, r/singularity, r/OpenAI, r/LocalLLaMA',redditMaxAge:1,arxivCategories:'cs.AI, cs.LG, cs.CL, cs.CV',mastodonInstance:'mastodon.social',mastodonHashtags:'#AI, #ArtificialIntelligence, #MachineLearning',rssFeeds:['https://www.artificialintelligence-news.com/feed/','https://openai.com/news/rss.xml','https://simonwillison.net/atom/everything/'],filterNonEnglish:true,strictFiltering:true,einkMode:true};
-            applyEink(); resetPag(); render(); closeSettings();
+            cfg = {timeFilter:'week',hnSearchTerm:'AI',redditSubreddits:'r/artificial, r/MachineLearning, r/singularity, r/OpenAI, r/LocalLLaMA',redditMaxAge:1,arxivCategories:'cs.AI, cs.LG, cs.CL, cs.CV',mastodonInstance:'mastodon.social',mastodonHashtags:'#AI, #ArtificialIntelligence, #MachineLearning',rssFeeds:['https://www.artificialintelligence-news.com/feed/','https://openai.com/news/rss.xml','https://simonwillison.net/atom/everything/'],filterNonEnglish:true,strictFiltering:true,theme:'eink'};
+            applyTheme(); resetPag(); render(); closeSettings();
         });
     }
 
@@ -1184,7 +1255,10 @@ const App = (function() {
         initDB().then(function() {
             return loadCfg();
         }).then(function() {
-            applyEink();
+            // Migrate old einkMode to new theme setting
+            if (cfg.einkMode !== undefined && !cfg.theme) { cfg.theme = cfg.einkMode ? 'eink' : 'dark'; delete cfg.einkMode; }
+            if (!cfg.theme) cfg.theme = 'eink';
+            applyTheme();
             document.getElementById('timeFilterMain').value = cfg.timeFilter || 'week';
             setupPWA();
             return loadArticles();
