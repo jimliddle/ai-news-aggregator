@@ -592,6 +592,13 @@ const App = (function() {
         return d.innerHTML;
     }
 
+    function unesc(text) {
+        if (!text) return '';
+        var d = document.createElement('textarea');
+        d.innerHTML = text;
+        return d.value;
+    }
+
     function sanitize(html) {
         if (!html) return '';
         var tmp = document.createElement('div');
@@ -682,7 +689,7 @@ const App = (function() {
                 if (!filterByTime(new Date(s.created_at).getTime())) return false;
                 return rx.test(c) || aiRx.test(c);
             }).map(function(s) {
-                return { id: 'hn_' + s.objectID, title: s.title || 'Untitled', url: s.url || ('https://news.ycombinator.com/item?id=' + s.objectID), description: s.story_text ? s.story_text.replace(/<[^>]*>/g, '').substring(0, 200) : '', source: 'hackernews', timestamp: new Date(s.created_at).getTime(), points: s.points || 0, comments: s.num_comments || 0 };
+                return { id: 'hn_' + s.objectID, title: unesc(s.title || 'Untitled'), url: s.url || ('https://news.ycombinator.com/item?id=' + s.objectID), description: s.story_text ? unesc(s.story_text.replace(/<[^>]*>/g, '')).substring(0, 200) : '', source: 'hackernews', timestamp: new Date(s.created_at).getTime(), points: s.points || 0, comments: s.num_comments || 0 };
             });
             pag.hackernews.page = loadMore ? page + 1 : 1;
             var p = Promise.resolve();
@@ -732,9 +739,9 @@ const App = (function() {
                         var desc = content.replace(/<[^>]*>/g, '').substring(0, 200);
                         posts.push({
                             id: 'reddit_' + redditId,
-                            title: title.trim(),
+                            title: unesc(title.trim()),
                             url: link,
-                            description: desc,
+                            description: unesc(desc),
                             source: 'reddit',
                             subreddit: sub,
                             timestamp: ts,
@@ -779,7 +786,7 @@ const App = (function() {
                         if (title && id) {
                             var ts = new Date(pub).getTime();
                             if (filterByTime(ts)) {
-                                newArts.push({ id: 'arxiv_' + id.split('/').pop().replace(/[^a-zA-Z0-9.]/g, '_'), title: title, url: id, source: 'arxiv', timestamp: ts, description: (authors.length ? authors.join(', ') + ' — ' : '') + summary.replace(/\n/g, ' ').substring(0, 200) });
+                                newArts.push({ id: 'arxiv_' + id.split('/').pop().replace(/[^a-zA-Z0-9.]/g, '_'), title: unesc(title), url: id, source: 'arxiv', timestamp: ts, description: unesc((authors.length ? authors.join(', ') + ' — ' : '') + summary.replace(/\n/g, ' ').substring(0, 200)) });
                             }
                         }
                     }
@@ -801,7 +808,7 @@ const App = (function() {
                 pag.github.hasMore = d.items && d.items.length === 20;
                 pag.github.page = page + 1;
                 var repos = (d.items || []).filter(function(r) { return filterByTime(new Date(r.pushed_at).getTime()); }).map(function(r) {
-                    return { id: 'github_' + r.id, title: (r.full_name + ': ' + (r.description || 'No description')).substring(0, 150), url: r.html_url, source: 'github', timestamp: new Date(r.pushed_at).getTime(), description: '⭐ ' + r.stargazers_count.toLocaleString() + ' stars · ' + (r.language || 'Multi'), stars: r.stargazers_count };
+                    return { id: 'github_' + r.id, title: unesc((r.full_name + ': ' + (r.description || 'No description')).substring(0, 150)), url: r.html_url, source: 'github', timestamp: new Date(r.pushed_at).getTime(), description: '⭐ ' + r.stargazers_count.toLocaleString() + ' stars · ' + (r.language || 'Multi'), stars: r.stargazers_count };
                 });
                 var sp = Promise.resolve();
                 repos.forEach(function(a) { sp = sp.then(function(){return saveArt(a);}); });
@@ -830,7 +837,7 @@ const App = (function() {
                             return filterByTime(new Date(t.created_at).getTime());
                         }).map(function(t) {
                             var txt = t.content.replace(/<[^>]*>/g, '');
-                            return { id: 'mastodon_' + t.id, title: txt.substring(0, 120) + (txt.length > 120 ? '…' : ''), url: t.url, description: txt.substring(0, 200), source: 'mastodon', instance: inst, hashtag: tags[i], timestamp: new Date(t.created_at).getTime(), boosts: t.reblogs_count, favorites: t.favourites_count };
+                            return { id: 'mastodon_' + t.id, title: unesc(txt.substring(0, 120) + (txt.length > 120 ? '…' : '')), url: t.url, description: unesc(txt.substring(0, 200)), source: 'mastodon', instance: inst, hashtag: tags[i], timestamp: new Date(t.created_at).getTime(), boosts: t.reblogs_count, favorites: t.favourites_count };
                         });
                         var sp = Promise.resolve();
                         posts.forEach(function(p) { sp = sp.then(function(){return saveArt(p);}); });
@@ -865,7 +872,7 @@ const App = (function() {
                         var ts = pub ? new Date(pub).getTime() : Date.now();
                         if (!filterByTime(ts)) continue;
                         var aid = link ? 'rss_' + btoa(link).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20) : 'rss_' + btoa(title).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
-                        newArts.push({ id: aid, title: title.trim(), url: link, description: desc.replace(/<[^>]*>/g, '').substring(0, 200), source: 'rss', feedUrl: feedUrl, timestamp: ts });
+                        newArts.push({ id: aid, title: unesc(title.trim()), url: link, description: unesc(desc.replace(/<[^>]*>/g, '').substring(0, 200)), source: 'rss', feedUrl: feedUrl, timestamp: ts });
                     }
                     var sp = Promise.resolve();
                     newArts.forEach(function(a) { sp = sp.then(function(){return saveArt(a);}); });
