@@ -187,6 +187,19 @@
             padding: 16px 20px; border-radius: var(--radius); margin-bottom: 20px;
             display: flex; gap: 28px; flex-wrap: wrap;
         }
+
+        .source-status {
+            margin-top: -10px; margin-bottom: 18px;
+            display: flex; flex-wrap: wrap; gap: 10px;
+            font-size: 12px; color: var(--text-muted);
+        }
+        .source-status:empty { display: none; }
+        .source-status .src-pill {
+            padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px;
+            background: var(--bg-surface);
+            white-space: nowrap;
+        }
+
         .stat { display: flex; flex-direction: column; gap: 2px; }
         .stat-label { font-size: 11px; font-family: var(--mono); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; }
         .stat-value { font-size: 20px; font-weight: 700; color: var(--accent-bright); }
@@ -324,7 +337,7 @@
                             <option value="all">All</option>
                         </select>
                     </div>
-                    <button class="btn" onclick="App.refresh()">↻ Refresh</button>
+                    <button class="btn" id="refreshBtn" onclick="App.refresh()">↻ Refresh</button>
                     <button class="settings-btn" onclick="App.openSettings()">⚙</button>
                 </div>
             </div>
@@ -342,6 +355,7 @@
             <div class="stat"><span class="stat-label">Sources</span><span class="stat-value" id="statSources">—</span></div>
             <div class="stat"><span class="stat-label">Updated</span><span class="stat-value" id="statTime" style="font-size:13px">—</span></div>
         </div>
+        <div id="sourceStatus" class="source-status" aria-live="polite"></div>
         <div class="tabs">
             <button class="tab active" onclick="App.switchTab('all',this)">All</button>
             <button class="tab" onclick="App.switchTab('hackernews',this)">HN</button>
@@ -626,16 +640,53 @@ const App = (function() {
     }
 
     // =================== CORS ===================
-    function fetchWithTimeout(url, options, ms) {
+    function fetchWithTimeout(url, options, ms, ctrl) {
         ms = ms || 15000;
         return new Promise(function(resolve, reject) {
-            var ctrl = new AbortController();
+            ctrl = ctrl || new AbortController();
             var timer = setTimeout(function() { ctrl.abort(); reject(new Error('Timeout after ' + ms + 'ms')); }, ms);
             var opts = options || {};
             opts.signal = ctrl.signal;
             fetch(url, opts).then(function(r) { clearTimeout(timer); resolve(r); }).catch(function(e) { clearTimeout(timer); reject(e); });
         });
     }
+
+    // =================== REFRESH RUN CONTROL ===================
+    var refreshState = { id: 0, inProgress: false, controllers: [] };
+
+    function abortActiveRefresh() {
+        try {
+            (refreshState.controllers || []).forEach(function(c) { try { c.abort(); } catch (e) {} });
+        } catch (e) {}
+        refreshState.controllers = [];
+        refreshState.inProgress = false;
+    }
+
+    function beginRefreshRun() {
+        abortActiveRefresh();
+        refreshState.id += 1;
+        refreshState.inProgress = true;
+        return refreshState.id;
+    }
+
+    function endRefreshRun(runId) {
+        if (runId === refreshState.id) {
+            refreshState.inProgress = false;
+            refreshState.controllers = [];
+        }
+    }
+
+    function registerRefreshController(ctrl) {
+        if (refreshState.inProgress && ctrl) refreshState.controllers.push(ctrl);
+        return ctrl;
+    }
+
+    function fetchWithRefreshTimeout(url, options, ms) {
+        var ctrl = registerRefreshController(new AbortController());
+        return fetchWithTimeout(url, options, ms, ctrl);
+    }
+
+
     var corsProxies = [
         function(u) { return 'https://corsproxy.io/?' + encodeURIComponent(u); },
         function(u) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); },
@@ -647,7 +698,7 @@ const App = (function() {
         function tryNext() {
             if (i >= corsProxies.length) return Promise.reject(new Error('All CORS proxies failed'));
             var proxyUrl = corsProxies[i++](url);
-            return fetchWithTimeout(proxyUrl, { method: 'GET', headers: { 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } }, 12000)
+            return fetchWithRefreshTimeout(proxyUrl, { method: 'GET', headers: { 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } }, 12000)
                 .then(function(r) { if (r.ok) return r.text(); return tryNext(); })
                 .catch(function() { return tryNext(); });
         }
@@ -695,7 +746,7 @@ const App = (function() {
         var ep = (cfg.timeFilter === 'day' || cfg.timeFilter === 'week') ? 'search_by_date' : 'search';
         var url = 'https://hn.algolia.com/api/v1/' + ep + '?query=' + encodeURIComponent(term.trim()) + '&tags=story&page=' + page + '&hitsPerPage=50';
 
-        return fetch(url).then(function(r) { return r.json(); }).then(function(data) {
+        return fetchWithRefreshTimeout(url, null, 15000).then(function(r) { return r.json(); }).then(function(data) {
             pag.hackernews.hasMore = page < (data.nbPages || 1) - 1;
             if (!data.hits || !data.hits.length) { pag.hackernews.hasMore = false; return []; }
             var rx = new RegExp('\\b' + term.toLowerCase() + '\\b', 'i');
@@ -785,7 +836,7 @@ const App = (function() {
         var chain = Promise.resolve([]);
         cats.forEach(function(cat) {
             chain = chain.then(function(all) {
-                return fetchCORS('http://export.arxiv.org/api/query?search_query=cat:' + cat + '&sortBy=submittedDate&sortOrder=descending&max_results=15').then(function(xml) {
+                return fetchCORS('https://export.arxiv.org/api/query?search_query=cat:' + cat + '&sortBy=submittedDate&sortOrder=descending&max_results=15').then(function(xml) {
                     var doc = new DOMParser().parseFromString(xml, 'text/xml');
                     if (doc.querySelector('parsererror')) return all;
                     var entries = doc.querySelectorAll('entry');
@@ -818,7 +869,7 @@ const App = (function() {
 
     function fetchGitHub(loadMore) {
         var page = loadMore ? pag.github.page : 1;
-        return fetch('https://api.github.com/search/repositories?q=topic:machine-learning+topic:artificial-intelligence+language:python&sort=updated&order=desc&per_page=20&page=' + page)
+        return fetchWithRefreshTimeout('https://api.github.com/search/repositories?q=topic:machine-learning+topic:artificial-intelligence+language:python&sort=updated&order=desc&per_page=20&page=' + page, null, 15000)
             .then(function(r) { if (!r.ok) { pag.github.hasMore = false; return []; } return r.json(); })
             .then(function(d) {
                 if (Array.isArray(d)) return []; // error response
@@ -845,7 +896,7 @@ const App = (function() {
                 chain = chain.then(function(all) {
                     var url = 'https://' + inst + '/api/v1/timelines/tag/' + tags[i] + '?limit=20';
                     if (loadMore && pag.mastodon.maxId && i === si) url += '&max_id=' + pag.mastodon.maxId;
-                    return fetch(url).then(function(r){return r.json();}).then(function(toots) {
+                    return fetchWithRefreshTimeout(url, null, 15000).then(function(r){return r.json();}).then(function(toots) {
                         if (toots.length > 0) { pag.mastodon.maxId = toots[toots.length-1].id; pag.mastodon.hasMore = true; }
                         else if (i === tags.length - 1) pag.mastodon.hasMore = false;
                         var posts = toots.filter(function(t) {
@@ -1080,32 +1131,77 @@ const App = (function() {
 
     // =================== REFRESH ===================
 
-    function refresh() {
+    
+    function updateSourceStatusUI(sourceStatus) {
+        var el = document.getElementById('sourceStatus');
+        if (!el) return;
+        if (!sourceStatus) { el.innerHTML = ''; return; }
+        var parts = [];
+        for (var k in sourceStatus) {
+            if (!Object.prototype.hasOwnProperty.call(sourceStatus, k)) continue;
+            var v = sourceStatus[k];
+            var cls = 'src-pill';
+            if (typeof v === 'string' && v.indexOf('✓') === 0) cls += ' ok';
+            else if (typeof v === 'string' && v.indexOf('✗') === 0) cls += ' bad';
+            else cls += ' pending';
+            parts.push('<span class="' + cls + '">' + esc(k + ': ' + v) + '</span>');
+        }
+        el.innerHTML = parts.join('');
+    }
+
+function refresh() {
+        var runId = beginRefreshRun();
         var statusEl = document.getElementById('content');
+        var refreshBtn = document.getElementById('refreshBtn');
+
+        if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = '↻ Refreshing…'; }
+
         statusEl.innerHTML = '<div class="loading">Fetching AI news…</div>';
         resetPag();
         commentCache = {};
 
-        var sourceStatus = {};
+        var sourceStatus = { 'HN': '…', 'Reddit': '…', 'ArXiv': '…', 'GitHub': '…', 'Mastodon': '…', 'RSS': '…' };
+        updateSourceStatusUI(sourceStatus);
+
+        function guard() { return runId === refreshState.id; }
+
+        function finish() {
+            if (!guard()) return;
+            endRefreshRun(runId);
+            if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = '↻ Refresh'; }
+        }
+
         function wrapFetch(name, promise) {
+            var timer = null;
             var timeout = new Promise(function(resolve) {
-                setTimeout(function() {
+                timer = setTimeout(function() {
+                    if (!guard()) return resolve([]);
                     sourceStatus[name] = '✗ timeout';
+                    updateSourceStatusUI(sourceStatus);
                     console.warn(name + ' timed out after 45s');
                     resolve([]);
                 }, 45000);
             });
+
             return Promise.race([promise, timeout]).then(function(results) {
-                if (!sourceStatus[name]) sourceStatus[name] = '✓ ' + results.length;
+                if (timer) clearTimeout(timer);
+                if (!guard()) return [];
+                // Only mark success if not already error/timeout
+                if (!sourceStatus[name] || sourceStatus[name] === '…') sourceStatus[name] = '✓ ' + results.length;
+                updateSourceStatusUI(sourceStatus);
                 return results;
             }).catch(function(e) {
+                if (timer) clearTimeout(timer);
+                if (!guard()) return [];
                 sourceStatus[name] = '✗ error';
+                updateSourceStatusUI(sourceStatus);
                 console.error(name + ' failed:', e);
                 return [];
             });
         }
 
         clearArts().then(function() {
+            if (!guard()) return [];
             totalFetched = 0;
             return Promise.all([
                 wrapFetch('HN', fetchHN(false)),
@@ -1116,6 +1212,7 @@ const App = (function() {
                 wrapFetch('RSS', fetchRSS())
             ]);
         }).then(function(results) {
+            if (!guard()) return;
             var all = [];
             for (var i = 0; i < results.length; i++) all = all.concat(results[i]);
             totalFetched = all.length;
@@ -1124,16 +1221,19 @@ const App = (function() {
             updateStats();
             render();
             document.getElementById('statTime').textContent = new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+
             // Log source status
             var statusParts = [];
             for (var k in sourceStatus) statusParts.push(k + ': ' + sourceStatus[k]);
             console.log('Source status: ' + statusParts.join(' | '));
         }).catch(function(e) {
+            if (!guard()) return;
             console.error('Refresh error:', e);
             statusEl.innerHTML = '<div class="error">Error fetching news. Please try refreshing.</div>';
+        }).then(function() {
+            finish();
         });
     }
-
     function updateStats() {
         document.getElementById('statTotal').textContent = totalFetched;
         document.getElementById('statShown').textContent = articles.length;
