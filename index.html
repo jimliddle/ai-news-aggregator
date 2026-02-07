@@ -562,9 +562,16 @@ const App = (function() {
 
     function clearArts() {
         return new Promise(function(resolve) {
-            var tx = db.transaction(['articles'], 'readwrite');
-            tx.objectStore('articles').clear();
-            tx.oncomplete = function() { resolve(); };
+            try {
+                var tx = db.transaction(['articles'], 'readwrite');
+                tx.objectStore('articles').clear();
+                tx.oncomplete = function() { resolve(); };
+                tx.onerror = function() { console.warn('clearArts error'); resolve(); };
+                tx.onabort = function() { console.warn('clearArts aborted'); resolve(); };
+            } catch(e) {
+                console.warn('clearArts exception:', e);
+                resolve();
+            }
         });
     }
 
@@ -619,6 +626,16 @@ const App = (function() {
     }
 
     // =================== CORS ===================
+    function fetchWithTimeout(url, options, ms) {
+        ms = ms || 15000;
+        return new Promise(function(resolve, reject) {
+            var ctrl = new AbortController();
+            var timer = setTimeout(function() { ctrl.abort(); reject(new Error('Timeout after ' + ms + 'ms')); }, ms);
+            var opts = options || {};
+            opts.signal = ctrl.signal;
+            fetch(url, opts).then(function(r) { clearTimeout(timer); resolve(r); }).catch(function(e) { clearTimeout(timer); reject(e); });
+        });
+    }
     var corsProxies = [
         function(u) { return 'https://corsproxy.io/?' + encodeURIComponent(u); },
         function(u) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); },
@@ -630,7 +647,7 @@ const App = (function() {
         function tryNext() {
             if (i >= corsProxies.length) return Promise.reject(new Error('All CORS proxies failed'));
             var proxyUrl = corsProxies[i++](url);
-            return fetch(proxyUrl, { method: 'GET', headers: { 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } })
+            return fetchWithTimeout(proxyUrl, { method: 'GET', headers: { 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } }, 12000)
                 .then(function(r) { if (r.ok) return r.text(); return tryNext(); })
                 .catch(function() { return tryNext(); });
         }
@@ -648,7 +665,7 @@ const App = (function() {
                 catch(e) { throw new Error('Response is not JSON: ' + t.substring(0, 100)); }
             });
         }
-        return fetch(url).then(function(r) {
+        return fetchWithTimeout(url, {}, 12000).then(function(r) {
             if (r.ok) return parseResponse(r);
             throw new Error('HTTP ' + r.status);
         }).catch(function(directErr) {
@@ -657,7 +674,7 @@ const App = (function() {
             function tryProxy() {
                 if (i >= corsProxies.length) return Promise.reject(new Error('All methods failed for: ' + url.substring(0, 80)));
                 var proxyUrl = corsProxies[i++](url);
-                return fetch(proxyUrl).then(function(r) {
+                return fetchWithTimeout(proxyUrl, {}, 12000).then(function(r) {
                     if (r.ok) return parseResponse(r);
                     console.log('Proxy ' + i + ' returned HTTP ' + r.status);
                     return tryProxy();
@@ -1071,8 +1088,15 @@ const App = (function() {
 
         var sourceStatus = {};
         function wrapFetch(name, promise) {
-            return promise.then(function(results) {
-                sourceStatus[name] = '✓ ' + results.length;
+            var timeout = new Promise(function(resolve) {
+                setTimeout(function() {
+                    sourceStatus[name] = '✗ timeout';
+                    console.warn(name + ' timed out after 45s');
+                    resolve([]);
+                }, 45000);
+            });
+            return Promise.race([promise, timeout]).then(function(results) {
+                if (!sourceStatus[name]) sourceStatus[name] = '✓ ' + results.length;
                 return results;
             }).catch(function(e) {
                 sourceStatus[name] = '✗ error';
