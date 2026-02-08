@@ -694,15 +694,25 @@ const App = (function() {
     ];
 
     function fetchCORS(url) {
-        var i = 0;
-        function tryNext() {
-            if (i >= corsProxies.length) return Promise.reject(new Error('All CORS proxies failed'));
-            var proxyUrl = corsProxies[i++](url);
-            return fetchWithRefreshTimeout(proxyUrl, { method: 'GET', headers: { 'Accept': 'application/rss+xml, application/xml, text/xml, */*' } }, 12000)
-                .then(function(r) { if (r.ok) return r.text(); return tryNext(); })
-                .catch(function() { return tryNext(); });
-        }
-        return tryNext();
+        // Try direct first (works when the target provides CORS headers).
+        return fetchWithRefreshTimeout(url, { method: 'GET', headers: { 'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*' } }, 12000)
+            .then(function(r) {
+                if (r.ok) return r.text();
+                throw new Error('HTTP ' + r.status);
+            })
+            .catch(function(directErr) {
+                // Fallback to CORS proxies
+                console.log('Direct fetch failed (' + directErr.message + '), trying proxies for: ' + url.substring(0, 80));
+                var i = 0;
+                function tryNext() {
+                    if (i >= corsProxies.length) return Promise.reject(new Error('All CORS proxies failed'));
+                    var proxyUrl = corsProxies[i++](url);
+                    return fetchWithRefreshTimeout(proxyUrl, { method: 'GET', headers: { 'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*' } }, 12000)
+                        .then(function(r) { if (r.ok) return r.text(); return tryNext(); })
+                        .catch(function() { return tryNext(); });
+                }
+                return tryNext();
+            });
     }
 
     // Try direct fetch first, then CORS proxies — returns parsed JSON
@@ -1156,6 +1166,7 @@ function refresh() {
 
         if (refreshBtn) { refreshBtn.disabled = true; refreshBtn.textContent = '↻ Refreshing…'; }
 
+        // Show loading state, but we'll progressively render as each source returns.
         statusEl.innerHTML = '<div class="loading">Fetching AI news…</div>';
         resetPag();
         commentCache = {};
@@ -1171,16 +1182,18 @@ function refresh() {
             if (refreshBtn) { refreshBtn.disabled = false; refreshBtn.textContent = '↻ Refresh'; }
         }
 
-        function wrapFetch(name, promise) {
+        // Allow per-source timeouts (mobile networks can be slow for RSS/proxies)
+        function wrapFetch(name, promise, timeoutMs) {
             var timer = null;
+            var ms = timeoutMs || 45000;
             var timeout = new Promise(function(resolve) {
                 timer = setTimeout(function() {
                     if (!guard()) return resolve([]);
                     sourceStatus[name] = '✗ timeout';
                     updateSourceStatusUI(sourceStatus);
-                    console.warn(name + ' timed out after 45s');
+                    console.warn(name + ' timed out after ' + Math.round(ms/1000) + 's');
                     resolve([]);
-                }, 45000);
+                }, ms);
             });
 
             return Promise.race([promise, timeout]).then(function(results) {
@@ -1200,37 +1213,65 @@ function refresh() {
             });
         }
 
-        clearArts().then(function() {
-            if (!guard()) return [];
-            totalFetched = 0;
-            return Promise.all([
-                wrapFetch('HN', fetchHN(false)),
-                wrapFetch('Reddit', fetchReddit(false)),
-                wrapFetch('ArXiv', fetchArXiv()),
-                wrapFetch('GitHub', fetchGitHub(false)),
-                wrapFetch('Mastodon', fetchMastodon(false)),
-                wrapFetch('RSS', fetchRSS())
-            ]);
-        }).then(function(results) {
+        // Progressive aggregation + render
+        var collected = [];
+        var renderedOnce = false;
+
+        function incorporate(newItems) {
             if (!guard()) return;
-            var all = [];
-            for (var i = 0; i < results.length; i++) all = all.concat(results[i]);
-            totalFetched = all.length;
-            var filtered = cfg.strictFiltering ? all.filter(isAIRelated) : all;
+            if (!newItems || !newItems.length) return;
+
+            collected = collected.concat(newItems);
+            totalFetched = collected.length;
+
+            var filtered = cfg.strictFiltering ? collected.filter(isAIRelated) : collected;
             articles = dedup(filtered);
+
             updateStats();
             render();
+            renderedOnce = true;
+        }
+
+        // If everything times out/errors, keep a friendly message
+        function showEmptyIfNeeded() {
+            if (!guard()) return;
+            if (!renderedOnce) {
+                statusEl.innerHTML = '<div class="error">No results yet (some sources may be slow or blocked). Try again, or change networks.</div>';
+            }
+        }
+
+        // Start clearing IndexedDB, but don't block progressive rendering on it.
+        clearArts().catch(function(e){ console.warn('clearArts failed:', e); });
+
+        totalFetched = 0;
+        articles = [];
+        updateStats();
+
+        var tasks = [
+            wrapFetch('HN', fetchHN(false), 45000).then(incorporate),
+            wrapFetch('Reddit', fetchReddit(false), 60000).then(incorporate),
+            wrapFetch('ArXiv', fetchArXiv(), 45000).then(incorporate),
+            wrapFetch('GitHub', fetchGitHub(false), 45000).then(incorporate),
+            wrapFetch('Mastodon', fetchMastodon(false), 45000).then(incorporate),
+            wrapFetch('RSS', fetchRSS(), 60000).then(incorporate)
+        ];
+
+        // Finalize when all sources have settled
+        Promise.allSettled(tasks).then(function() {
+            if (!guard()) return;
             document.getElementById('statTime').textContent = new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
 
             // Log source status
             var statusParts = [];
             for (var k in sourceStatus) statusParts.push(k + ': ' + sourceStatus[k]);
             console.log('Source status: ' + statusParts.join(' | '));
+
+            showEmptyIfNeeded();
         }).catch(function(e) {
             if (!guard()) return;
             console.error('Refresh error:', e);
             statusEl.innerHTML = '<div class="error">Error fetching news. Please try refreshing.</div>';
-        }).then(function() {
+        }).finally(function() {
             finish();
         });
     }
