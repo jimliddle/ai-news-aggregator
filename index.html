@@ -15,6 +15,7 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
+            --ui-scale: 1;
             --bg: #0f0f1a;
             --bg-surface: #1a1a2e;
             --bg-elevated: #25253e;
@@ -87,9 +88,9 @@
         html.midnight .logo span { color: #0a84ff; }
         html.midnight .stats-bar { background: #1c1c1e; border: none; border-radius: 13px; }
         html.midnight .stat-value { color: #0a84ff; font-weight: 700; }
-        html.midnight .stat-label { color: #8e8e93; font-size: 10px; letter-spacing: 1px; }
+        html.midnight .stat-label { color: #8e8e93; font-size: calc(10px * var(--ui-scale)); letter-spacing: 1px; }
         html.midnight .tabs { background: #1c1c1e; border: none; border-radius: 13px; padding: 4px; }
-        html.midnight .tab { border-radius: 10px; font-weight: 500; font-size: 13px; padding: 8px 14px; }
+        html.midnight .tab { border-radius: 10px; font-weight: 500; font-size: calc(13px * var(--ui-scale)); padding: 8px 14px; }
         html.midnight .tab:hover { background: #2c2c2e; }
         html.midnight .tab.active { background: #0a84ff; color: #fff; }
         html.midnight .news-item { background: #1c1c1e; border: none; border-left: 3px solid transparent; border-radius: 13px; margin-bottom: 10px; }
@@ -105,7 +106,19 @@
         html.midnight .ai-score { color: #30d158; }
         html.midnight .btn, html.midnight .settings-btn { background: #2c2c2e; border: none; color: #f5f5f7; border-radius: 10px; }
         html.midnight .btn:hover, html.midnight .settings-btn:hover { background: #3a3a3c; }
-        html.midnight .time-filter-container select { background: #2c2c2e; border: none; color: #f5f5f7; border-radius: 10px; }
+
+        .font-btn{
+            background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text);
+            cursor: pointer; padding: 6px 10px; border-radius: var(--radius); transition: all 0.2s;
+            display: inline-flex; align-items: baseline; gap: 2px; min-width: 42px; justify-content: center;
+        }
+        .font-btn:hover{ border-color: var(--border-hover); }
+        .font-btn .a-small{ font-size: calc(12px * var(--ui-scale)); opacity: 0.85; line-height: 1; }
+        .font-btn .a-big{ font-size: calc(18px * var(--ui-scale)); font-weight: 700; line-height: 1; }
+        html[data-font="0"] { --ui-scale: 1; }
+html[data-font="1"] { --ui-scale: 1.125; }
+html[data-font="2"] { --ui-scale: 1.25; }
+html.midnight .time-filter-container select { background: #2c2c2e; border: none; color: #f5f5f7; border-radius: 10px; }
         html.midnight .more-btn { background: #0a84ff; color: #fff; border: none; border-radius: 13px; font-weight: 600; }
         html.midnight .more-btn:hover { background: #0070e0; }
         html.midnight .install-prompt { background: #1c1c1e; border: none; border-radius: 13px; }
@@ -142,13 +155,13 @@
             position: fixed; top: 0; width: 100%; z-index: 1000;
         }
         .header-content { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-        .logo { font-size: 20px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+        .logo { font-size: calc(20px * var(--ui-scale)); font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
         .logo span { color: var(--accent-bright); }
         .header-actions { display: flex; gap: 10px; align-items: center; }
 
         .time-filter-container select {
             background: var(--bg-elevated); color: var(--text); border: 1px solid var(--border);
-            padding: 8px 30px 8px 12px; border-radius: var(--radius); font-size: 13px;
+            padding: 8px 30px 8px 12px; border-radius: var(--radius); font-size: calc(13px * var(--ui-scale));
             font-family: var(--font); cursor: pointer; appearance: none;
             background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%239090b0" stroke-width="2"%3e%3cpolyline points="6 9 12 15 18 9"%3e%3c/polyline%3e%3c/svg%3e');
             background-repeat: no-repeat; background-position: right 8px center; background-size: 14px;
@@ -158,13 +171,13 @@
         .btn {
             background: var(--bg-elevated); color: var(--text); border: 1px solid var(--border);
             padding: 8px 14px; border-radius: var(--radius); cursor: pointer;
-            font-size: 13px; font-family: var(--font); font-weight: 500; transition: all 0.2s;
+            font-size: calc(13px * var(--ui-scale)); font-family: var(--font); font-weight: 500; transition: all 0.2s;
         }
         .btn:hover { border-color: var(--border-hover); }
 
         .settings-btn {
             background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text);
-            cursor: pointer; font-size: 18px; padding: 6px 10px; border-radius: var(--radius); transition: all 0.2s;
+            cursor: pointer; font-size: calc(18px * var(--ui-scale)); padding: 6px 10px; border-radius: var(--radius); transition: all 0.2s;
         }
         .settings-btn:hover { border-color: var(--border-hover); }
 
@@ -178,7 +191,7 @@
         .install-prompt {
             background: var(--accent-glow); border: 1px solid var(--accent); color: var(--text);
             padding: 14px 18px; border-radius: var(--radius); margin-bottom: 20px;
-            display: none; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px;
+            display: none; align-items: center; justify-content: space-between; gap: 12px; font-size: calc(14px * var(--ui-scale));
         }
         .install-prompt.show { display: flex; }
 
@@ -191,7 +204,7 @@
         .source-status {
             margin-top: -10px; margin-bottom: 18px;
             display: flex; flex-wrap: wrap; gap: 10px;
-            font-size: 12px; color: var(--text-muted);
+            font-size: calc(12px * var(--ui-scale)); color: var(--text-muted);
         }
         .source-status:empty { display: none; }
         .source-status .src-pill {
@@ -201,8 +214,8 @@
         }
 
         .stat { display: flex; flex-direction: column; gap: 2px; }
-        .stat-label { font-size: 11px; font-family: var(--mono); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; }
-        .stat-value { font-size: 20px; font-weight: 700; color: var(--accent-bright); }
+        .stat-label { font-size: calc(11px * var(--ui-scale)); font-family: var(--mono); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; }
+        .stat-value { font-size: calc(20px * var(--ui-scale)); font-weight: 700; color: var(--accent-bright); }
 
         .tabs {
             background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius);
@@ -212,7 +225,7 @@
         .tabs::-webkit-scrollbar { display: none; }
         .tab {
             padding: 9px 16px; cursor: pointer; border: none; background: none;
-            font-size: 13px; font-family: var(--font); color: var(--text-secondary);
+            font-size: calc(13px * var(--ui-scale)); font-family: var(--font); color: var(--text-secondary);
             transition: all 0.2s; border-radius: 7px; font-weight: 500; white-space: nowrap; flex-shrink: 0;
         }
         .tab:hover { color: var(--text); background: var(--bg-elevated); }
@@ -227,7 +240,7 @@
 
         .news-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 8px; }
         .source-badge {
-            padding: 3px 8px; border-radius: 4px; font-size: 10px; font-family: var(--mono);
+            padding: 3px 8px; border-radius: 4px; font-size: calc(10px * var(--ui-scale)); font-family: var(--mono);
             font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
         }
         .badge-hackernews { background: #ff660022; color: #ff9544; border: 1px solid #ff660033; }
@@ -237,50 +250,50 @@
         .badge-rss { background: #ffa50022; color: #ffbb44; border: 1px solid #ffa50033; }
         .badge-mastodon { background: #6364ff22; color: #8888ff; border: 1px solid #6364ff33; }
 
-        .news-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 8px; text-decoration: none; display: block; line-height: 1.45; }
+        .news-title { font-size: calc(16px * var(--ui-scale)); font-weight: 600; color: var(--text); margin-bottom: 8px; text-decoration: none; display: block; line-height: 1.45; }
         .news-title:hover { color: var(--accent-bright); }
-        .news-meta { font-size: 12px; font-family: var(--mono); color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
-        .comments-link { color: var(--accent-bright); text-decoration: none; font-size: 11px; }
+        .news-meta { font-size: calc(12px * var(--ui-scale)); font-family: var(--mono); color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        .comments-link { color: var(--accent-bright); text-decoration: none; font-size: calc(11px * var(--ui-scale)); }
         .comments-link:hover { text-decoration: underline; }
-        .news-description { font-size: 14px; color: var(--text-secondary); line-height: 1.55; margin-top: 8px; max-height: 44px; overflow: hidden; }
-        .ai-score { font-family: var(--mono); font-size: 10px; padding: 3px 7px; background: var(--accent-glow); border: 1px solid var(--accent); color: var(--accent-bright); border-radius: 4px; }
+        .news-description { font-size: calc(14px * var(--ui-scale)); color: var(--text-secondary); line-height: 1.55; margin-top: 8px; max-height: 44px; overflow: hidden; }
+        .ai-score { font-family: var(--mono); font-size: calc(10px * var(--ui-scale)); padding: 3px 7px; background: var(--accent-glow); border: 1px solid var(--accent); color: var(--accent-bright); border-radius: 4px; }
 
         /* Inline comments */
         .cmt-toggle {
             display: inline-flex; align-items: center; gap: 5px;
             padding: 3px 10px; background: var(--bg-elevated); border: 1px solid var(--border);
-            border-radius: 5px; color: var(--accent-bright); font-size: 12px; font-family: var(--mono);
+            border-radius: 5px; color: var(--accent-bright); font-size: calc(12px * var(--ui-scale)); font-family: var(--mono);
             cursor: pointer; transition: all 0.2s; min-height: 28px; line-height: 1;
         }
         .cmt-toggle:hover { border-color: var(--accent); background: var(--accent-glow); }
         .cmt-toggle.open { background: var(--accent-glow); border-color: var(--accent); }
-        .cmt-toggle .arr { transition: transform 0.2s; display: inline-block; font-size: 10px; }
+        .cmt-toggle .arr { transition: transform 0.2s; display: inline-block; font-size: calc(10px * var(--ui-scale)); }
         .cmt-toggle.open .arr { transform: rotate(90deg); }
 
         .cmt-thread { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; display: none; }
         .cmt-thread.open { display: block; }
-        .cmt-loading { padding: 12px; color: var(--text-secondary); font-size: 13px; font-style: italic; }
+        .cmt-loading { padding: 12px; color: var(--text-secondary); font-size: calc(13px * var(--ui-scale)); font-style: italic; }
         .comment { padding: 10px 0; border-bottom: 1px solid var(--border); }
         .comment:last-child { border-bottom: none; }
         .comment-nest { margin-left: 16px; padding-left: 12px; border-left: 2px solid var(--border); }
-        .cmt-author { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--accent-bright); margin-bottom: 4px; }
+        .cmt-author { font-family: var(--mono); font-size: calc(11px * var(--ui-scale)); font-weight: 600; color: var(--accent-bright); margin-bottom: 4px; }
         .cmt-author .cmt-time { font-weight: 400; color: var(--text-secondary); margin-left: 6px; }
         .cmt-author .cmt-score { font-weight: 400; color: var(--text-secondary); margin-left: 6px; }
-        .cmt-body { font-size: 13px; line-height: 1.55; color: var(--text); word-break: break-word; }
+        .cmt-body { font-size: calc(13px * var(--ui-scale)); line-height: 1.55; color: var(--text); word-break: break-word; }
         .cmt-body a { color: var(--accent-bright); }
         .cmt-body p { margin-bottom: 6px; }
         .cmt-body p:last-child { margin-bottom: 0; }
-        .cmt-body pre, .cmt-body code { font-family: var(--mono); font-size: 12px; background: var(--bg); padding: 2px 5px; border-radius: 3px; }
+        .cmt-body pre, .cmt-body code { font-family: var(--mono); font-size: calc(12px * var(--ui-scale)); background: var(--bg); padding: 2px 5px; border-radius: 3px; }
         .cmt-body pre { padding: 8px 10px; overflow-x: auto; margin: 6px 0; }
         .cmt-body pre code { padding: 0; background: none; }
 
         .loading { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
         .loading::after { content: ""; display: block; width: 32px; height: 32px; margin: 16px auto 0; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .error { background: #f871711a; border: 1px solid #f8717133; color: var(--error); padding: 20px; border-radius: var(--radius); margin: 20px 0; font-size: 14px; }
+        .error { background: #f871711a; border: 1px solid #f8717133; color: var(--error); padding: 20px; border-radius: var(--radius); margin: 20px 0; font-size: calc(14px * var(--ui-scale)); }
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text-secondary); }
-        .empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
-        .more-btn { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-size: 14px; font-family: var(--font); font-weight: 600; cursor: pointer; margin-top: 16px; transition: all 0.2s; }
+        .empty-state h3 { font-size: calc(18px * var(--ui-scale)); margin-bottom: 8px; color: var(--text); }
+        .more-btn { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: var(--radius); font-size: calc(14px * var(--ui-scale)); font-family: var(--font); font-weight: 600; cursor: pointer; margin-top: 16px; transition: all 0.2s; }
         .more-btn:hover { opacity: 0.9; }
         .more-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -289,34 +302,34 @@
         .modal.active { display: flex; }
         .modal-content { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; max-width: 560px; width: 92%; max-height: 85vh; overflow-y: auto; box-shadow: var(--shadow); }
         .modal-header { background: var(--bg-elevated); padding: 18px 24px; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
-        .modal-header h2 { font-size: 18px; font-weight: 700; }
-        .close-x { color: var(--text-secondary); font-size: 24px; cursor: pointer; background: none; border: none; padding: 4px 8px; }
+        .modal-header h2 { font-size: calc(18px * var(--ui-scale)); font-weight: 700; }
+        .close-x { color: var(--text-secondary); font-size: calc(24px * var(--ui-scale)); cursor: pointer; background: none; border: none; padding: 4px 8px; }
         .close-x:hover { color: var(--text); }
         .modal-body { padding: 24px; }
         .sg { margin-bottom: 20px; }
-        .sg label { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--text); }
-        .sg .hint { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
-        .sg input[type="text"], .sg input[type="url"] { width: 100%; padding: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-size: 14px; font-family: var(--font); color: var(--text); }
+        .sg label { display: block; margin-bottom: 6px; font-size: calc(13px * var(--ui-scale)); font-weight: 600; color: var(--text); }
+        .sg .hint { font-size: calc(12px * var(--ui-scale)); color: var(--text-secondary); margin-top: 4px; }
+        .sg input[type="text"], .sg input[type="url"] { width: 100%; padding: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; font-size: calc(14px * var(--ui-scale)); font-family: var(--font); color: var(--text); }
         .sg input:focus { outline: none; border-color: var(--accent); }
-        .cbl { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; }
-        .save-btn { background: var(--accent); color: white; border: none; padding: 12px 24px; border-radius: var(--radius); font-size: 14px; font-family: var(--font); font-weight: 600; cursor: pointer; width: 100%; margin-top: 16px; }
+        .cbl { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: calc(14px * var(--ui-scale)); }
+        .save-btn { background: var(--accent); color: white; border: none; padding: 12px 24px; border-radius: var(--radius); font-size: calc(14px * var(--ui-scale)); font-family: var(--font); font-weight: 600; cursor: pointer; width: 100%; margin-top: 16px; }
         .rss-item { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; padding: 8px 10px; background: var(--bg); border-radius: 6px; border: 1px solid var(--border); }
-        .rss-item span { flex: 1; font-size: 12px; font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .rm-btn { background: var(--error); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; }
+        .rss-item span { flex: 1; font-size: calc(12px * var(--ui-scale)); font-family: var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .rm-btn { background: var(--error); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: calc(11px * var(--ui-scale)); }
         .dz { background: #f871710a; border: 1px solid #f8717133; padding: 16px; border-radius: var(--radius); }
-        .dz-btn { background: var(--error); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: var(--font); margin-top: 10px; }
+        .dz-btn { background: var(--error); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: calc(13px * var(--ui-scale)); font-family: var(--font); margin-top: 10px; }
 
         @media (max-width: 768px) {
             .header-content { flex-wrap: wrap; }
             main { margin-top: calc(80px + env(safe-area-inset-top)); }
             .stats-bar { gap: 16px; padding: 14px; }
-            .stat-value { font-size: 18px; }
+            .stat-value { font-size: calc(18px * var(--ui-scale)); }
             .news-item { padding: 14px; }
-            .tab { padding: 8px 12px; font-size: 12px; }
+            .tab { padding: 8px 12px; font-size: calc(12px * var(--ui-scale)); }
             .modal-content { width: 100%; height: 100%; max-width: 100%; max-height: 100%; border-radius: 0; }
             .modal-header { border-radius: 0; }
         }
-        @media (max-width: 480px) { .container { padding: 0 12px; } .news-title { font-size: 15px; } }
+        @media (max-width: 480px) { .container { padding: 0 12px; } .news-title { font-size: calc(15px * var(--ui-scale)); } }
         @media (hover: none) and (pointer: coarse) { .news-item:hover { transform: none; border-left-color: transparent; } }
         a, button, input, select, textarea { min-height: 44px; }
         .cmt-toggle { min-height: 28px; }
@@ -338,6 +351,7 @@
                         </select>
                     </div>
                     <button class="btn" id="refreshBtn" onclick="App.refresh()">↻ Refresh</button>
+                    <button class="font-btn" id="fontBtn" onclick="App.cycleFont()" title="Font size"><span class="a-small">a</span><span class="a-big">A</span></button>
                     <button class="settings-btn" onclick="App.openSettings()">⚙</button>
                 </div>
             </div>
@@ -488,7 +502,7 @@ const App = (function() {
     var cfg = {
         timeFilter: 'week',
         hnSearchTerm: 'AI',
-        redditSubreddits: 'r/artificial, r/MachineLearning, r/singularity, r/OpenAI, r/LocalLLaMA',
+        redditSubreddits: 'r/artificial, r/MachineLearning, r/singularity, r/OpenAI, r/LocalLLaMA, r/Ollama, r/AgentsOfAI, r/AgentToAgent',
         redditMaxAge: 1,
         arxivCategories: 'cs.AI, cs.LG, cs.CL, cs.CV',
         mastodonInstance: 'mastodon.social',
@@ -750,30 +764,92 @@ const App = (function() {
 
     // =================== FETCHERS ===================
 
+    
     function fetchHN(loadMore) {
-        var term = cfg.hnSearchTerm || 'AI';
+        var termRaw = cfg.hnSearchTerm || 'AI';
+        var terms = termRaw.split(',').map(function(s){ return (s || '').trim(); }).filter(Boolean);
+        if (!terms.length) terms = ['AI'];
+
+        // Pagination applies to the primary term only (extras are a one-shot enrichment on initial refresh)
+        var primary = terms[0];
+        var extras = terms.slice(1);
+
         var page = loadMore ? pag.hackernews.page : 0;
         var ep = (cfg.timeFilter === 'day' || cfg.timeFilter === 'week') ? 'search_by_date' : 'search';
-        var url = 'https://hn.algolia.com/api/v1/' + ep + '?query=' + encodeURIComponent(term.trim()) + '&tags=story&page=' + page + '&hitsPerPage=50';
 
-        return fetchWithRefreshTimeout(url, null, 15000).then(function(r) { return r.json(); }).then(function(data) {
-            pag.hackernews.hasMore = page < (data.nbPages || 1) - 1;
-            if (!data.hits || !data.hits.length) { pag.hackernews.hasMore = false; return []; }
-            var rx = new RegExp('\\b' + term.toLowerCase() + '\\b', 'i');
-            var aiRx = /\b(artificial intelligence|machine learning|neural|deep learning|llm|gpt|transformer|chatgpt|openai|anthropic|claude)\b/i;
-            var arts = data.hits.filter(function(s) {
-                var c = (s.title || '') + ' ' + (s.story_text || '');
-                if (cfg.filterNonEnglish && !isEnglish(c)) return false;
-                if (!filterByTime(new Date(s.created_at).getTime())) return false;
-                return rx.test(c) || aiRx.test(c);
-            }).map(function(s) {
-                return { id: 'hn_' + s.objectID, title: unesc(s.title || 'Untitled'), url: s.url || ('https://news.ycombinator.com/item?id=' + s.objectID), description: s.story_text ? unesc(s.story_text.replace(/<[^>]*>/g, '')).substring(0, 200) : '', source: 'hackernews', timestamp: new Date(s.created_at).getTime(), points: s.points || 0, comments: s.num_comments || 0 };
+        function fetchTerm(t, pageNum, isExtra) {
+            var url = 'https://hn.algolia.com/api/v1/' + ep
+                + '?query=' + encodeURIComponent((t || '').trim())
+                + '&tags=story&page=' + pageNum + '&hitsPerPage=50';
+
+            return fetchWithRefreshTimeout(url, null, 15000)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (!isExtra) {
+                        pag.hackernews.hasMore = pageNum < (data.nbPages || 1) - 1;
+                    }
+                    if (!data.hits || !data.hits.length) {
+                        if (!isExtra) pag.hackernews.hasMore = false;
+                        return [];
+                    }
+
+                    var rx = new RegExp('\\b' + (t || '').toLowerCase().replace(/[.*+?^${}()|[\\]\\]/g, '\\$&') + '\\b', 'i');
+                    var aiRx = /\b(artificial intelligence|machine learning|neural|deep learning|llm|gpt|transformer|chatgpt|openai|anthropic|claude|agentic|agents?)\b/i;
+
+                    return data.hits.filter(function(s) {
+                        var c = (s.title || '') + ' ' + (s.story_text || '');
+                        if (cfg.filterNonEnglish && !isEnglish(c)) return false;
+                        if (!filterByTime(new Date(s.created_at).getTime())) return false;
+                        return rx.test(c) || aiRx.test(c);
+                    }).map(function(s) {
+                        return {
+                            id: 'hn_' + s.objectID,
+                            title: unesc(s.title || 'Untitled'),
+                            url: s.url || ('https://news.ycombinator.com/item?id=' + s.objectID),
+                            description: s.story_text ? unesc(s.story_text.replace(/<[^>]*>/g, '')).substring(0, 200) : '',
+                            source: 'hackernews',
+                            timestamp: new Date(s.created_at).getTime(),
+                            points: s.points || 0,
+                            comments: s.num_comments || 0
+                        };
+                    });
+                });
+        }
+
+        var tasks = [];
+        tasks.push(fetchTerm(primary, page, false));
+
+        if (!loadMore && extras.length) {
+            extras.forEach(function(t) {
+                tasks.push(fetchTerm(t, 0, true).catch(function(){ return []; }));
             });
+        }
+
+        return Promise.all(tasks).then(function(parts) {
+            var flat = [];
+            parts.forEach(function(arr){ if (arr && arr.length) flat = flat.concat(arr); });
+
+            // Dedupe by HN objectID (id already 'hn_<objectID>')
+            var seen = Object.create(null);
+            var arts = [];
+            flat.forEach(function(a) {
+                if (!a || !a.id) return;
+                if (seen[a.id]) return;
+                seen[a.id] = true;
+                arts.push(a);
+            });
+
+            // Update paging only for primary term
             pag.hackernews.page = loadMore ? page + 1 : 1;
+
             var p = Promise.resolve();
             arts.forEach(function(a) { p = p.then(function() { return saveArt(a); }); });
             return p.then(function() { return arts; });
-        }).catch(function(e) { console.error('HN error:', e); pag.hackernews.hasMore = false; return []; });
+        }).catch(function(e) {
+            console.error('HN error:', e);
+            pag.hackernews.hasMore = false;
+            return [];
+        });
     }
 
     function fetchReddit(loadMore) {
@@ -1337,6 +1413,39 @@ function refresh() {
         document.querySelector('meta[name="theme-color"]').setAttribute('content', colors[cfg.theme] || colors.dark);
     }
 
+    // Font scaling (A/a button)
+    var FONT_SCALES = ['0','1','2']; // maps to html[data-font]
+    function applyFontScale() {
+        var idx = 0;
+        try {
+            var saved = localStorage.getItem('aiNewsFont') || '';
+            idx = Math.max(0, Math.min(FONT_SCALES.length - 1, parseInt(saved || '0', 10) || 0));
+        } catch(e) { idx = 0; }
+        document.documentElement.setAttribute('data-font', FONT_SCALES[idx]);
+        updateFontButton(idx);
+        return idx;
+    }
+
+    function updateFontButton(idx) {
+        var btn = document.getElementById('fontBtn');
+        if (!btn) return;
+        // subtle visual cue: bold the big A more as size increases
+        btn.style.opacity = '1';
+        btn.setAttribute('aria-label', 'Font size ' + (idx + 1) + ' of ' + FONT_SCALES.length);
+        btn.setAttribute('title', 'Font size (' + (idx + 1) + '/' + FONT_SCALES.length + ')');
+    }
+
+    function cycleFont() {
+        var idx = 0;
+        try { idx = parseInt(localStorage.getItem('aiNewsFont') || '0', 10) || 0; } catch(e) { idx = 0; }
+        idx = (idx + 1) % FONT_SCALES.length;
+        try { localStorage.setItem('aiNewsFont', String(idx)); } catch(e) {}
+        document.documentElement.setAttribute('data-font', FONT_SCALES[idx]);
+        updateFontButton(idx);
+        // re-render masonry-ish layout
+        render();
+    }
+
     function openSettings() {
         document.getElementById('settingsModal').classList.add('active');
         document.getElementById('sFilterEn').checked = cfg.filterNonEnglish !== false;
@@ -1390,7 +1499,7 @@ function refresh() {
             var tx = db.transaction(['settings'], 'readwrite');
             tx.objectStore('settings').clear();
             articles = []; totalFetched = 0; commentCache = {};
-            cfg = {timeFilter:'week',hnSearchTerm:'AI',redditSubreddits:'r/artificial, r/MachineLearning, r/singularity, r/OpenAI, r/LocalLLaMA',redditMaxAge:1,arxivCategories:'cs.AI, cs.LG, cs.CL, cs.CV',mastodonInstance:'mastodon.social',mastodonHashtags:'#AI, #ArtificialIntelligence, #MachineLearning',rssFeeds:['https://www.artificialintelligence-news.com/feed/','https://openai.com/news/rss.xml','https://simonwillison.net/atom/everything/'],filterNonEnglish:true,strictFiltering:true,theme:'eink'};
+            cfg = {timeFilter:'week',hnSearchTerm:'AI',redditSubreddits:'r/artificial, r/MachineLearning, r/singularity, r/OpenAI, r/LocalLLaMA',redditMaxAge:1,arxivCategories:'cs.AI, cs.LG, cs.CL, cs.CV',mastodonInstance:'mastodon.social',mastodonHashtags:'#AI, #ArtificialIntelligence, #MachineLearning',rssFeeds:['https://www.artificialintelligence-news.com/feed/','https://openai.com/news/rss.xml','https://simonwillison.net/atom/everything/'],filterNonEnglish:true,strictFiltering:true,theme:'midnight'};
             applyTheme(); resetPag(); render(); closeSettings();
         });
     }
@@ -1429,8 +1538,9 @@ function refresh() {
         }).then(function() {
             // Migrate old einkMode to new theme setting
             if (cfg.einkMode !== undefined && !cfg.theme) { cfg.theme = cfg.einkMode ? 'eink' : 'dark'; delete cfg.einkMode; }
-            if (!cfg.theme) cfg.theme = 'eink';
+            if (!cfg.theme) cfg.theme = 'midnight';
             applyTheme();
+            applyFontScale();
             document.getElementById('timeFilterMain').value = cfg.timeFilter || 'week';
             setupPWA();
             return loadArticles();
@@ -1466,7 +1576,8 @@ function refresh() {
         addRss: addRss,
         rmRss: rmRss,
         toggleCmt: toggleComments,
-        installPWA: installPWA
+        installPWA: installPWA,
+        cycleFont: cycleFont
     };
 
 })();
