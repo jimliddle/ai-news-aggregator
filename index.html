@@ -701,33 +701,77 @@ const App = (function() {
     }
 
 
-    var corsProxies = [
-        function(u) { return 'https://corsproxy.io/?' + encodeURIComponent(u); },
-        function(u) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); },
-        function(u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); }
-    ];
-
-    function fetchCORS(url) {
-        // Try direct first (works when the target provides CORS headers).
-        return fetchWithRefreshTimeout(url, { method: 'GET', headers: { 'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*' } }, 12000)
-            .then(function(r) {
-                if (r.ok) return r.text();
-                throw new Error('HTTP ' + r.status);
-            })
-            .catch(function(directErr) {
-                // Fallback to CORS proxies
-                console.log('Direct fetch failed (' + directErr.message + '), trying proxies for: ' + url.substring(0, 80));
-                var i = 0;
-                function tryNext() {
-                    if (i >= corsProxies.length) return Promise.reject(new Error('All CORS proxies failed'));
-                    var proxyUrl = corsProxies[i++](url);
-                    return fetchWithRefreshTimeout(proxyUrl, { method: 'GET', headers: { 'Accept': 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*' } }, 12000)
-                        .then(function(r) { if (r.ok) return r.text(); return tryNext(); })
-                        .catch(function() { return tryNext(); });
-                }
-                return tryNext();
+    function getCorsProxies() {
+        var list = [];
+        // Optional: set localStorage.customCorsProxy to your own proxy base (recommended), e.g. 'https://YOUR-WORKER.workers.dev/?url='
+        // You can also use a template containing '{url}' which will be replaced with an encoded URL.
+        var custom = (localStorage.getItem('customCorsProxy') || '').trim();
+        if (custom) {
+            list.push(function(u) {
+                if (custom.indexOf('{url}') >= 0) return custom.replace('{url}', encodeURIComponent(u));
+                return custom + encodeURIComponent(u);
             });
+        }
+        // Public proxies (best-effort; may rate-limit or block).
+        list.push(function(u) { return 'https://corsproxy.io/?' + encodeURIComponent(u); });
+        list.push(function(u) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); });
+        list.push(function(u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); });
+        list.push(function(u) { return 'https://thingproxy.freeboard.io/fetch/' + u; });
+        return list;
     }
+
+
+    function fetchCORS(url, opts) {
+        // opts can be:
+        //  - boolean: skipDirect
+        //  - object: { skipDirect: boolean, timeoutMs: number, accept: string }
+        var skipDirect = false;
+        var timeoutMs = 12000;
+        var accept = 'application/rss+xml, application/atom+xml, application/xml, text/xml, */*';
+
+        if (typeof opts === 'boolean') {
+            skipDirect = opts;
+        } else if (opts && typeof opts === 'object') {
+            if (typeof opts.skipDirect === 'boolean') skipDirect = opts.skipDirect;
+            if (typeof opts.timeoutMs === 'number') timeoutMs = opts.timeoutMs;
+            if (typeof opts.accept === 'string') accept = opts.accept;
+        }
+
+        function attemptFetch(targetUrl) {
+            return fetchWithRefreshTimeout(targetUrl, {
+                method: 'GET',
+                headers: {
+                    'Accept': accept,
+                    // Some endpoints/proxies behave better with an explicit UA.
+                    'User-Agent': 'Mozilla/5.0'
+                }
+            }, timeoutMs).then(function(r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.text();
+            });
+        }
+
+        function viaProxies(reason) {
+            var proxies = getCorsProxies();
+            var i = 0;
+
+            function tryNext() {
+                if (i >= proxies.length) return Promise.reject(new Error('All CORS proxies failed'));
+                var proxyUrl = proxies[i++](url);
+                return attemptFetch(proxyUrl).catch(function() { return tryNext(); });
+            }
+
+            // Keep console noise low; uncomment for debugging:
+            // console.log('Using proxy for:', url, reason ? '(' + reason + ')' : '');
+            return tryNext();
+        }
+
+        if (skipDirect) return viaProxies('skipDirect');
+
+        // Try direct first (works when target provides CORS headers), then proxies.
+        return attemptFetch(url).catch(function(e) { return viaProxies(e.message); });
+    }
+
 
     // Try direct fetch first, then CORS proxies — returns parsed JSON
     function fetchJSON(url) {
@@ -922,7 +966,7 @@ const App = (function() {
         var chain = Promise.resolve([]);
         cats.forEach(function(cat) {
             chain = chain.then(function(all) {
-                return fetchCORS('https://export.arxiv.org/api/query?search_query=cat:' + cat + '&sortBy=submittedDate&sortOrder=descending&max_results=15').then(function(xml) {
+                return fetchCORS('https://export.arxiv.org/api/query?search_query=cat:' + cat + '&sortBy=submittedDate&sortOrder=descending&max_results=15', true).then(function(xml) {
                     var doc = new DOMParser().parseFromString(xml, 'text/xml');
                     if (doc.querySelector('parsererror')) return all;
                     var entries = doc.querySelectorAll('entry');
@@ -1008,7 +1052,7 @@ const App = (function() {
         var chain = Promise.resolve([]);
         cfg.rssFeeds.forEach(function(feedUrl) {
             chain = chain.then(function(all) {
-                return fetchCORS(feedUrl).then(function(xml) {
+                return fetchCORS(feedUrl, true).then(function(xml) {
                     var doc = new DOMParser().parseFromString(xml, 'text/xml');
                     if (doc.querySelector('parsererror')) return all;
                     var items = doc.querySelectorAll('item, entry');
