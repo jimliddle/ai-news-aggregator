@@ -789,10 +789,11 @@ const App = (function() {
             throw new Error('HTTP ' + r.status);
         }).catch(function(directErr) {
             console.log('Direct fetch failed (' + directErr.message + '), trying proxies for: ' + url.substring(0, 80));
+            var proxies = getCorsProxies();
             var i = 0;
             function tryProxy() {
-                if (i >= corsProxies.length) return Promise.reject(new Error('All methods failed for: ' + url.substring(0, 80)));
-                var proxyUrl = corsProxies[i++](url);
+                if (i >= proxies.length) return Promise.reject(new Error('All methods failed for: ' + url.substring(0, 80)));
+                var proxyUrl = proxies[i++](url);
                 return fetchWithTimeout(proxyUrl, {}, 12000).then(function(r) {
                     if (r.ok) return parseResponse(r);
                     console.log('Proxy ' + i + ' returned HTTP ' + r.status);
@@ -1048,37 +1049,177 @@ const App = (function() {
         return chain.then(function(all) { pag.mastodon.hi = mx % tags.length; return all; });
     }
 
-    function fetchRSS() {
-        var chain = Promise.resolve([]);
-        cfg.rssFeeds.forEach(function(feedUrl) {
-            chain = chain.then(function(all) {
-                return fetchCORS(feedUrl, true).then(function(xml) {
-                    var doc = new DOMParser().parseFromString(xml, 'text/xml');
-                    if (doc.querySelector('parsererror')) return all;
-                    var items = doc.querySelectorAll('item, entry');
-                    var newArts = [];
-                    for (var i = 0; i < items.length; i++) {
-                        var item = items[i];
-                        var title = (item.querySelector('title') || {}).textContent || '';
-                        var linkEl = item.querySelector('link');
-                        var link = linkEl ? (linkEl.textContent || linkEl.getAttribute('href') || '') : '';
-                        var descEl = item.querySelector('description, summary, content');
-                        var desc = descEl ? descEl.textContent || '' : '';
-                        var pubEl = item.querySelector('pubDate, published, updated');
-                        var pub = pubEl ? pubEl.textContent || '' : '';
-                        if (cfg.filterNonEnglish && !isEnglish(title + ' ' + desc)) continue;
-                        var ts = pub ? new Date(pub).getTime() : Date.now();
-                        if (!filterByTime(ts)) continue;
-                        var aid = link ? 'rss_' + btoa(link).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20) : 'rss_' + btoa(title).replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
-                        newArts.push({ id: aid, title: unesc(title.trim()), url: link, description: unesc(desc.replace(/<[^>]*>/g, '').substring(0, 200)), source: 'rss', feedUrl: feedUrl, timestamp: ts });
+    function fetchRSSProgressive(opts) {
+        opts = opts || {};
+        var onItems = typeof opts.onItems === 'function' ? opts.onItems : function(){};
+        var onStatus = typeof opts.onStatus === 'function' ? opts.onStatus : function(){};
+        var isActive = typeof opts.isActive === 'function' ? opts.isActive : function(){ return true; };
+
+        var feeds = (cfg.rssFeeds || []).slice();
+        var totalItems = [];
+        var okFeeds = 0;
+        var failed = []; // {url, attempts, nextAt, lastError}
+        var runningRetry = false;
+
+        // Retry tuning (kept conservative to avoid hammering public proxies)
+        var BASE_DELAY = 5000;
+        var MAX_DELAY = 120000;
+        var JITTER = 0.35;
+        var MAX_ATTEMPTS = 8;
+
+        function nowMs(){ return Date.now(); }
+
+        function setRssStatus() {
+            var remaining = failed.filter(function(f){ return f.attempts < MAX_ATTEMPTS; }).length;
+            var msg = '✓ ' + totalItems.length + ' (' + okFeeds + '/' + feeds.length + ' feeds';
+            if (remaining > 0) msg += ', retrying ' + remaining;
+            msg += ')';
+            onStatus(msg);
+        }
+
+        function parseRssToArticles(xml, feedUrl) {
+            var doc = new DOMParser().parseFromString(xml, 'text/xml');
+            if (doc.querySelector('parsererror')) { throw new Error('RSS parse error (invalid XML)'); }
+            // Some proxies return HTML error pages with 200 OK
+            var rootName = (doc.documentElement && doc.documentElement.nodeName) ? doc.documentElement.nodeName.toLowerCase() : '';
+            if (rootName && rootName !== 'rss' && rootName !== 'feed') { throw new Error('Unexpected XML root: ' + rootName); }
+            var items = doc.querySelectorAll('item, entry');
+            var newArts = [];
+            for (var i = 0; i < items.length; i++) {
+                var item = items[i];
+                var title = (item.querySelector('title') || {}).textContent || '';
+                var linkEl = item.querySelector('link');
+                var link = linkEl ? (linkEl.textContent || linkEl.getAttribute('href') || '') : '';
+                var descEl = item.querySelector('description, summary, content');
+                var desc = descEl ? (descEl.textContent || '') : '';
+                var dateEl = item.querySelector('pubDate, published, updated');
+                var dateStr = dateEl ? (dateEl.textContent || '') : '';
+                var ts = dateStr ? (new Date(dateStr).getTime() || Date.now()) : Date.now();
+
+                if (!title || !link) continue;
+                var artId = 'rss_' + link.replace(/[^a-zA-Z0-9]/g, '').substring(0, 40);
+                newArts.push({
+                    id: artId,
+                    title: sanitize(title),
+                    url: link,
+                    description: sanitize(desc).substring(0, 280),
+                    source: 'rss',
+                    feed: feedUrl,
+                    timestamp: ts
+                });
+            }
+            return newArts;
+        }
+
+        function saveBatch(arts) {
+            // Preserve the existing behavior: save to IndexedDB
+            var sp = Promise.resolve();
+            arts.forEach(function(a) { sp = sp.then(function(){ return saveArt(a); }); });
+            return sp.then(function(){ return arts; });
+        }
+
+        function attemptOnce(feedUrl) {
+            // skipDirect=true because RSS almost never has CORS headers
+            return fetchCORS(feedUrl, true).then(function(xml) {
+                var arts = parseRssToArticles(xml, feedUrl);
+                if (!arts.length) { throw new Error('No items parsed'); }
+                return saveBatch(arts);
+            });
+        }
+
+        function scheduleRetry(f) {
+            var exp = Math.min(MAX_DELAY, BASE_DELAY * Math.pow(2, Math.max(0, f.attempts - 1)));
+            var jitter = exp * (Math.random() * JITTER);
+            f.nextAt = nowMs() + exp + jitter;
+        }
+
+        function retryLoop() {
+            if (runningRetry) return;
+            runningRetry = true;
+
+            var tick = function() {
+                if (!isActive()) { runningRetry = false; return; }
+
+                // Find next eligible failure
+                failed.sort(function(a,b){ return a.nextAt - b.nextAt; });
+                var next = failed.find(function(f){ return f.attempts < MAX_ATTEMPTS; });
+                if (!next) { runningRetry = false; return; }
+
+                var delay = Math.max(0, (next.nextAt || nowMs()) - nowMs());
+                // Visible countdown + console trace so you can see retries happening
+                var secs = Math.ceil(delay/1000);
+                onStatus('✓ ' + totalItems.length + ' (' + okFeeds + '/' + feeds.length + ' feeds, retrying ' + failed.filter(function(f){return f.attempts < MAX_ATTEMPTS;}).length + ', next retry in ' + secs + 's)');
+                console.log('[RSS] scheduling retry in', secs + 's', 'for', next.url, '(attempt', next.attempts + 1, 'of', MAX_ATTEMPTS + ')');
+                setTimeout(function() {
+                    if (!isActive()) { runningRetry = false; return; }
+
+                    console.log('[RSS] retrying now:', next.url, '(attempt', next.attempts + 1, 'of', MAX_ATTEMPTS + ')');
+
+                    attemptOnce(next.url).then(function(arts) {
+                        if (!isActive()) return;
+                        if (arts && arts.length) {
+                            // Success: remove from failed list
+                            failed = failed.filter(function(x){ return x.url !== next.url; });
+                            okFeeds++;
+                            totalItems = totalItems.concat(arts);
+                            onItems(arts); // progressive render
+                            setRssStatus();
+                        } else {
+                            // Treat empty as non-fatal; still count as success and stop retrying
+                            failed = failed.filter(function(x){ return x.url !== next.url; });
+                            okFeeds++;
+                            setRssStatus();
+                        }
+                    }).catch(function(e) {
+                        if (!isActive()) return;
+                        next.attempts++;
+                        next.lastError = (e && e.message) ? e.message : String(e);
+                        scheduleRetry(next);
+                        onStatus('✓ ' + totalItems.length + ' (' + okFeeds + '/' + feeds.length + ' feeds, retrying ' + failed.filter(function(f){return f.attempts < MAX_ATTEMPTS;}).length + ')');
+                    }).finally(function() {
+                        // Continue loop
+                        tick();
+                    });
+                }, delay);
+            };
+
+            tick();
+        }
+
+        // Initial pass (sequential to be gentle on proxies)
+        var chain = Promise.resolve();
+        onStatus('…');
+        feeds.forEach(function(feedUrl) {
+            chain = chain.then(function() {
+                if (!isActive()) return;
+                return attemptOnce(feedUrl).then(function(arts) {
+                    if (!isActive()) return;
+                    okFeeds++;
+                    if (arts && arts.length) {
+                        totalItems = totalItems.concat(arts);
+                        onItems(arts);
                     }
-                    var sp = Promise.resolve();
-                    newArts.forEach(function(a) { sp = sp.then(function(){return saveArt(a);}); });
-                    return sp.then(function() { return all.concat(newArts); });
-                }).catch(function(e) { console.error('RSS error ' + feedUrl + ':', e); return all; });
+                    setRssStatus();
+                }).catch(function(e) {
+                    if (!isActive()) return;
+                    failed.push({ url: feedUrl, attempts: 1, nextAt: nowMs() + BASE_DELAY, lastError: (e && e.message) ? e.message : String(e) });
+                    onStatus('✓ ' + totalItems.length + ' (' + okFeeds + '/' + feeds.length + ' feeds, retrying ' + failed.length + ')');
+                });
             });
         });
-        return chain;
+
+        return chain.then(function() {
+            if (!isActive()) return [];
+            // Kick off background retries (non-blocking)
+            if (failed.length) retryLoop();
+            // Resolve with all items (so refresh can mark counts)
+            return totalItems;
+        });
+    }
+
+    function fetchRSS() {
+        // Backward compatible wrapper (non-progressive)
+        return fetchRSSProgressive({});
     }
 
     // =================== COMMENTS ===================
@@ -1373,7 +1514,7 @@ function refresh() {
             wrapFetch('ArXiv', fetchArXiv(), 45000).then(incorporate),
             wrapFetch('GitHub', fetchGitHub(false), 45000).then(incorporate),
             wrapFetch('Mastodon', fetchMastodon(false), 45000).then(incorporate),
-            wrapFetch('RSS', fetchRSS(), 60000).then(incorporate)
+            wrapFetch('RSS', fetchRSSProgressive({ onItems: incorporate, onStatus: function(s){ sourceStatus['RSS']=s; updateSourceStatusUI(sourceStatus); }, isActive: guard }), 60000)
         ];
 
         // Finalize when all sources have settled
