@@ -69,6 +69,8 @@
         html.eink .comments-toggle { background: #f5f5f5; border: 1px solid #aaa; color: #111; }
         html.eink .comment-author { color: #111; }
         html.eink .comment-nested { border-left-color: #bbb; }
+        html.eink .search-input { background: #fff; color: #111; border: 1px solid #888; }
+        html.eink .search-input::placeholder { color: #666; }
 
         /* Midnight — Apple Health inspired */
         html.midnight {
@@ -106,6 +108,8 @@
         html.midnight .ai-score { color: #30d158; }
         html.midnight .btn, html.midnight .settings-btn { background: #2c2c2e; border: none; color: #f5f5f7; border-radius: 10px; }
         html.midnight .btn:hover, html.midnight .settings-btn:hover { background: #3a3a3c; }
+        html.midnight .search-input { background: #1c1c1e; border: 1px solid rgba(255,255,255,0.08); color: #f5f5f7; border-radius: 13px; }
+        html.midnight .search-input:not(:disabled):focus { border-color: #0a84ff; }
 
         .font-btn{
             background: var(--bg-elevated); border: 1px solid var(--border); color: var(--text);
@@ -212,6 +216,25 @@ html.midnight .time-filter-container select { background: #2c2c2e; border: none;
             background: var(--bg-surface);
             white-space: nowrap;
         }
+
+        .search-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+        .search-input-wrap { flex: 1; position: relative; display: flex; align-items: center; }
+        .search-icon { position: absolute; left: 12px; color: var(--text-secondary); font-size: 15px; pointer-events: none; user-select: none; line-height: 1; }
+        .search-input {
+            width: 100%; background: var(--bg-surface); color: var(--text); border: 1px solid var(--border);
+            padding: 9px 36px 9px 36px; border-radius: var(--radius);
+            font-size: calc(13px * var(--ui-scale)); font-family: var(--font);
+            transition: border-color 0.2s; box-sizing: border-box;
+        }
+        .search-input:not(:disabled):focus { outline: none; border-color: var(--accent); }
+        .search-input:disabled { opacity: 0.38; cursor: not-allowed; }
+        .search-input::placeholder { color: var(--text-secondary); }
+        .search-clear {
+            position: absolute; right: 8px; background: none; border: none;
+            color: var(--text-secondary); cursor: pointer; font-size: 20px; padding: 0 4px; line-height: 1;
+        }
+        .search-clear:hover { color: var(--text); }
+        .search-match { font-size: calc(11px * var(--ui-scale)); color: var(--text-secondary); white-space: nowrap; font-family: var(--mono); }
 
         .stat { display: flex; flex-direction: column; gap: 2px; }
         .stat-label { font-size: calc(11px * var(--ui-scale)); font-family: var(--mono); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; }
@@ -380,6 +403,18 @@ html.midnight .time-filter-container select { background: #2c2c2e; border: none;
             
             <button class="tab" onclick="App.switchTab('rss',this)">RSS</button>
         </div>
+        <div id="searchBar" class="search-bar">
+            <div class="search-input-wrap">
+                <span class="search-icon">⌕</span>
+                <input type="text" id="searchInput" class="search-input"
+                    placeholder='Filter: AI AND Agent · AI OR "machine learning" · "exact phrase"'
+                    disabled autocomplete="off" autocorrect="off" spellcheck="false"
+                    oninput="App.onSearchInput(this.value)" />
+                <button id="searchClear" class="search-clear" style="display:none"
+                    onclick="App.clearSearch()" aria-label="Clear filter" title="Clear filter">×</button>
+            </div>
+            <span id="searchMatch" class="search-match"></span>
+        </div>
         <div id="content"><div class="loading">Loading AI news…</div></div>
     </div></main>
 
@@ -495,6 +530,8 @@ const App = (function() {
     var currentTab = 'all';
     var deferredPrompt = null;
     var commentCache = {};
+    var searchQuery = '';
+    var parsedSearch = null;
 
     var DB_NAME = 'AINewsHub6';
     var DB_VER = 1;
@@ -1339,14 +1376,88 @@ const App = (function() {
 
     // =================== RENDER ===================
 
+    // =================== SEARCH ===================
+
+    function parseSearchQuery(raw) {
+        raw = (raw || '').trim();
+        if (!raw) return null;
+        // Extract quoted phrases, replace with placeholders
+        var phrases = [];
+        var norm = raw.replace(/"([^"]+)"/g, function(_, p) {
+            phrases.push(p.toLowerCase());
+            return '\x00P' + (phrases.length - 1) + '\x00';
+        });
+        var op, parts;
+        if (/\bor\b/i.test(norm)) {
+            op = 'OR'; parts = norm.split(/\bor\b/i);
+        } else if (/\band\b/i.test(norm)) {
+            op = 'AND'; parts = norm.split(/\band\b/i);
+        } else {
+            // No explicit operator: whitespace-split, all terms must match (AND)
+            op = 'AND';
+            var tokens = norm.trim().split(/\s+/);
+            var terms = tokens.map(function(t) {
+                var m = t.match(/^\x00P(\d+)\x00$/);
+                return { word: m ? phrases[parseInt(m[1])] : t.toLowerCase() };
+            }).filter(function(t) { return t.word.length > 0; });
+            return { op: op, terms: terms };
+        }
+        var terms = parts.map(function(part) {
+            var t = part.trim();
+            var m = t.match(/^\x00P(\d+)\x00$/);
+            return { word: m ? phrases[parseInt(m[1])] : t.toLowerCase() };
+        }).filter(function(t) { return t.word.length > 0; });
+        return { op: op, terms: terms };
+    }
+
+    function matchesSearch(a, parsed) {
+        if (!parsed || !parsed.terms.length) return true;
+        var hay = ((a.title || '') + ' ' + (a.description || '')).toLowerCase();
+        function check(t) { return hay.indexOf(t.word) !== -1; }
+        return parsed.op === 'OR' ? parsed.terms.some(check) : parsed.terms.every(check);
+    }
+
+    function enableSearchBar() {
+        var inp = document.getElementById('searchInput');
+        if (inp && inp.disabled) inp.disabled = false;
+    }
+
+    function onSearchInput(val) {
+        searchQuery = val;
+        parsedSearch = parseSearchQuery(val);
+        var clr = document.getElementById('searchClear');
+        if (clr) clr.style.display = val ? 'inline' : 'none';
+        render();
+    }
+
+    function clearSearch() {
+        searchQuery = '';
+        parsedSearch = null;
+        var inp = document.getElementById('searchInput');
+        if (inp) inp.value = '';
+        var clr = document.getElementById('searchClear');
+        if (clr) clr.style.display = 'none';
+        var mc = document.getElementById('searchMatch');
+        if (mc) mc.textContent = '';
+        render();
+    }
+
+    // =================== RENDER ===================
+
     function render() {
         var el = document.getElementById('content');
         var list = articles;
         if (currentTab !== 'all') list = articles.filter(function(a){return a.source===currentTab;});
+        if (parsedSearch) list = list.filter(function(a){ return matchesSearch(a, parsedSearch); });
         list.sort(function(a,b){return b.timestamp-a.timestamp;});
 
+        var mc = document.getElementById('searchMatch');
+        if (mc) mc.textContent = parsedSearch ? list.length + ' match' + (list.length !== 1 ? 'es' : '') : '';
+
         if (!list.length) {
-            el.innerHTML = '<div class="empty-state"><h3>No articles found</h3><p>Try refreshing or adjusting settings.</p></div>';
+            el.innerHTML = parsedSearch
+                ? '<div class="empty-state"><h3>No matches</h3><p>Try different terms or <a href="#" onclick="App.clearSearch();return false;" style="color:var(--accent)">clear the filter</a>.</p></div>'
+                : '<div class="empty-state"><h3>No articles found</h3><p>Try refreshing or adjusting settings.</p></div>';
             return;
         }
 
@@ -1490,7 +1601,7 @@ function refresh() {
 
             updateStats();
             render();
-            renderedOnce = true;
+            if (!renderedOnce) { renderedOnce = true; enableSearchBar(); }
         }
 
         // If everything times out/errors, keep a friendly message
@@ -1735,6 +1846,7 @@ function refresh() {
             } else {
                 updateStats();
                 render();
+                enableSearchBar();
             }
         }).catch(function(e) {
             console.error('Init error:', e);
@@ -1762,7 +1874,9 @@ function refresh() {
         rmRss: rmRss,
         toggleCmt: toggleComments,
         installPWA: installPWA,
-        cycleFont: cycleFont
+        cycleFont: cycleFont,
+        onSearchInput: onSearchInput,
+        clearSearch: clearSearch
     };
 
 })();
