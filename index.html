@@ -213,9 +213,12 @@ html.midnight .time-filter-container select { background: #2c2c2e; border: none;
         .source-status:empty { display: none; }
         .source-status .src-pill {
             padding: 4px 10px; border: 1px solid var(--border); border-radius: 999px;
-            background: var(--bg-surface);
-            white-space: nowrap;
+            background: var(--bg-surface); white-space: nowrap; font-family: var(--mono);
         }
+        .source-status .src-pill.ok   { color: var(--success); border-color: rgba(74,222,128,0.25); }
+        .source-status .src-pill.bad  { color: var(--error);   border-color: rgba(248,113,113,0.35); }
+        .source-status .src-pill.retry-pill { cursor: pointer; }
+        .source-status .src-pill.retry-pill:hover { border-color: var(--accent); color: var(--accent-bright); background: var(--accent-glow); }
 
         .search-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
         .search-input-wrap { flex: 1; position: relative; display: flex; align-items: center; }
@@ -437,6 +440,9 @@ html.midnight .time-filter-container select { background: #2c2c2e; border: none;
                     <div style="display:flex;gap:8px;margin-top:8px"><input type="url" id="newRss" placeholder="https://example.com/feed.xml" style="flex:1"><button class="btn" onclick="App.addRss()" style="background:var(--success);color:#fff;border:none;min-height:40px">Add</button></div>
                 </div>
                 <div class="sg"><div class="dz"><p style="font-size:13px">Clear all cached data and reset.</p><button class="dz-btn" onclick="App.clearAll()">Clear All Data</button></div></div>
+                <div style="text-align:center; padding: 12px 0 4px; font-size: calc(13px * var(--ui-scale)); color: var(--text-secondary);">
+                    Follow my Substack, <a href="https://whyaiman.substack.com/" target="_blank" rel="noopener" style="color: var(--accent-bright); text-decoration: none; font-weight: 600;">Why AI Man</a>
+                </div>
                 <button class="save-btn" onclick="App.saveSettings()">Save Settings</button>
             </div>
         </div>
@@ -532,6 +538,7 @@ const App = (function() {
     var commentCache = {};
     var searchQuery = '';
     var parsedSearch = null;
+    var activeSourceStatus = {}; // kept in sync with the most recent refresh; retrySource mutates this directly
 
     var DB_NAME = 'AINewsHub6';
     var DB_VER = 1;
@@ -544,7 +551,7 @@ const App = (function() {
         arxivCategories: 'cs.AI, cs.LG, cs.CL, cs.CV',
         mastodonInstance: 'mastodon.social',
         mastodonHashtags: '#AI, #ArtificialIntelligence, #MachineLearning',
-        rssFeeds: ['https://www.artificialintelligence-news.com/feed/', 'https://openai.com/news/rss.xml', 'https://simonwillison.net/atom/everything/'],
+        rssFeeds: ['https://www.artificialintelligence-news.com/feed/', 'https://openai.com/news/rss.xml', 'https://simonwillison.net/atom/everything/', 'https://whyaiman.substack.com/feed'],
         filterNonEnglish: true,
         strictFiltering: true,
         theme: 'eink'
@@ -1522,13 +1529,74 @@ const App = (function() {
         for (var k in sourceStatus) {
             if (!Object.prototype.hasOwnProperty.call(sourceStatus, k)) continue;
             var v = sourceStatus[k];
+            var isError = typeof v === 'string' && v.indexOf('✗') === 0;
             var cls = 'src-pill';
             if (typeof v === 'string' && v.indexOf('✓') === 0) cls += ' ok';
-            else if (typeof v === 'string' && v.indexOf('✗') === 0) cls += ' bad';
+            else if (isError) cls += ' bad';
             else cls += ' pending';
-            parts.push('<span class="' + cls + '">' + esc(k + ': ' + v) + '</span>');
+            var label = esc(k + ': ' + v);
+            if (isError) {
+                parts.push('<span class="' + cls + ' retry-pill" onclick="App.retrySource(\'' + k + '\')" title="Click to retry ' + k + '">' + label + ' ↺</span>');
+            } else {
+                parts.push('<span class="' + cls + '">' + label + '</span>');
+            }
         }
         el.innerHTML = parts.join('');
+    }
+
+    function incorporateItems(newItems) {
+        if (!newItems || !newItems.length) return 0;
+        var filtered = cfg.strictFiltering ? newItems.filter(isAIRelated) : newItems;
+        var ids = new Set(articles.map(function(a){ return a.id; }));
+        var unique = filtered.filter(function(a){ return !ids.has(a.id); });
+        if (!unique.length) return 0;
+        articles = dedup(articles.concat(unique));
+        totalFetched += unique.length;
+        updateStats();
+        render();
+        return unique.length;
+    }
+
+    function retrySource(name) {
+        var refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn && refreshBtn.disabled) return; // full refresh running — don't interfere
+
+        var fetchMap = {
+            'HN':       function(){ return fetchHN(false); },
+            'Reddit':   function(){ return fetchReddit(false); },
+            'ArXiv':    function(){ return fetchArXiv(); },
+            'GitHub':   function(){ return fetchGitHub(false); },
+            'Mastodon': function(){ return fetchMastodon(false); },
+            'RSS':      function(){ return fetchRSS(); }
+        };
+        var fetcher = fetchMap[name];
+        if (!fetcher) return;
+
+        var timeoutMs = (name === 'RSS' || name === 'Reddit') ? 60000 : 45000;
+        activeSourceStatus[name] = '↺ retrying…';
+        updateSourceStatusUI(activeSourceStatus);
+
+        var timedOut = false;
+        var timeoutId = setTimeout(function() {
+            timedOut = true;
+            activeSourceStatus[name] = '✗ timeout';
+            updateSourceStatusUI(activeSourceStatus);
+        }, timeoutMs);
+
+        fetcher().then(function(items) {
+            if (timedOut) return;
+            clearTimeout(timeoutId);
+            var total = items ? items.length : 0;
+            var added = incorporateItems(items || []);
+            activeSourceStatus[name] = '✓ ' + total + (added > 0 ? ' (+' + added + ' new)' : '');
+            updateSourceStatusUI(activeSourceStatus);
+        }).catch(function(e) {
+            if (timedOut) return;
+            clearTimeout(timeoutId);
+            activeSourceStatus[name] = '✗ error';
+            updateSourceStatusUI(activeSourceStatus);
+            console.error('Retry ' + name + ' failed:', e);
+        });
     }
 
 function refresh() {
@@ -1544,6 +1612,7 @@ function refresh() {
         commentCache = {};
 
         var sourceStatus = { 'HN': '…', 'Reddit': '…', 'ArXiv': '…', 'GitHub': '…', 'Mastodon': '…', 'RSS': '…' };
+        activeSourceStatus = sourceStatus; // module-scope alias so retrySource can update it
         updateSourceStatusUI(sourceStatus);
 
         function guard() { return runId === refreshState.id; }
@@ -1795,7 +1864,7 @@ function refresh() {
             var tx = db.transaction(['settings'], 'readwrite');
             tx.objectStore('settings').clear();
             articles = []; totalFetched = 0; commentCache = {};
-            cfg = {timeFilter:'week',hnSearchTerm:'AI',redditSubreddits:'r/artificial, r/MachineLearning, r/singularity, r/OpenAI, r/LocalLLaMA',redditMaxAge:1,arxivCategories:'cs.AI, cs.LG, cs.CL, cs.CV',mastodonInstance:'mastodon.social',mastodonHashtags:'#AI, #ArtificialIntelligence, #MachineLearning',rssFeeds:['https://www.artificialintelligence-news.com/feed/','https://openai.com/news/rss.xml','https://simonwillison.net/atom/everything/'],filterNonEnglish:true,strictFiltering:true,theme:'midnight'};
+            cfg = {timeFilter:'week',hnSearchTerm:'AI',redditSubreddits:'r/artificial, r/MachineLearning, r/singularity, r/OpenAI, r/LocalLLaMA',redditMaxAge:1,arxivCategories:'cs.AI, cs.LG, cs.CL, cs.CV',mastodonInstance:'mastodon.social',mastodonHashtags:'#AI, #ArtificialIntelligence, #MachineLearning',rssFeeds:['https://www.artificialintelligence-news.com/feed/','https://openai.com/news/rss.xml','https://simonwillison.net/atom/everything/','https://whyaiman.substack.com/feed'],filterNonEnglish:true,strictFiltering:true,theme:'midnight'};
             applyTheme(); resetPag(); render(); closeSettings();
         });
     }
@@ -1876,7 +1945,8 @@ function refresh() {
         installPWA: installPWA,
         cycleFont: cycleFont,
         onSearchInput: onSearchInput,
-        clearSearch: clearSearch
+        clearSearch: clearSearch,
+        retrySource: retrySource
     };
 
 })();
